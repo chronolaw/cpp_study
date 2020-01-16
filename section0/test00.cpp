@@ -18,4 +18,6 @@ int main()
     cout << "gcc major = " << __GNUC__ << endl;
     cout << "gcc minor = " << __GNUC_MINOR__ << endl;
     cout << "gcc patch = " << __GNUC_PATCHLEVEL__ << endl;
+
+    cout << "libstdc++ = " << __GLIBCXX__ << endl;
 }
