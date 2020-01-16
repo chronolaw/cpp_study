@@ -1,7 +1,7 @@
 // Copyright (c) 2020 by Chrono
 
-#ifndef _COMMON_STD_HPP_INCLUDED_
-#define _COMMON_STD_HPP_INCLUDED_
+#ifndef _COMMON_STD_HPP
+#define _COMMON_STD_HPP
 
 #include <cassert>
 
@@ -16,5 +16,5 @@
 
 //never 'using namespace std;' in c++ header
 
-#endif  //_COMMON_STD_HPP_INCLUDED_
+#endif  //_COMMON_STD_HPP
 
