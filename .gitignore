@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+# own config
+a.out
+*.swp
