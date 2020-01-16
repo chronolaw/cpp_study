@@ -1,13 +1,14 @@
 // Copyright (c) 2020 by Chrono
 //
+// g++ test00.cpp -std=c++11 -o a.out;./a.out
 // g++ test00.cpp -std=c++14 -o a.out;./a.out
 // g++ test00.cpp -std=c++14 -I../common -o a.out;./a.out
 //
 // gcc -E -dM - < /dev/null
 
-//#include <iostream>
+#include <iostream>
 
-#include "std.hpp"
+//#include "std.hpp"
 
 int main()
 {
