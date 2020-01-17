@@ -8,12 +8,13 @@
 // gcc -E -dM - < /dev/null
 
 #include <iostream>
+#include <stdexcept>
 
 //[[deprecated]]      // c+14 or later
-//[[gnu::deprecated]] // c+11 or later
+[[gnu::deprecated]] // c+11 or later
 int old_func()
 {
-    //[[gnu::deprecated]]
+    //[[gnu::deprecated("I hate this")]]
     int value = 0;
 
     return value;
@@ -33,6 +34,12 @@ void last_func()
     printf("after main()\n");
 }
 
+[[gnu::always_inline]] inline
+int get_num()
+{
+    return 42;
+}
+
 void case1()
 {
     using namespace std;
@@ -43,6 +50,7 @@ void case1()
     cout << "case1" << endl;
 }
 
+[[gnu::hot]]
 void case2()
 {
     using namespace std;
@@ -50,9 +58,16 @@ void case2()
     cout << "case2" << endl;
 }
 
+[[noreturn]]
+int case3(bool flag)
+{
+    throw std::runtime_error("XXX");
+}
+
 int main()
 {
-    //old_func();
+    old_func();
+    get_num();
 
     case1();
     case2();
