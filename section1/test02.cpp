@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#define BEGIN_NAMESPACE(x)  namespace x {
+#define END_NAMESPACE(x)    }
 
 void case1()
 {
@@ -21,8 +23,27 @@ void case2()
 
     cout << "using namespace std" << endl;
 }
+
+BEGIN_NAMESPACE(my_own)
+
+class MyClass final
+{
+};
+
+void case3()
+{
+    using namespace std;
+
+    cout << "working in own namespace" << endl;
+}
+
+END_NAMESPACE(my_own)
+
 int main()
 {
     case1();
     case2();
+
+    my_own::case3();
+    my_own::MyClass obj;
 }
