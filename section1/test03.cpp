@@ -18,19 +18,29 @@ void case1()
     cout << "c++14 or later" << endl;
 #elif __cplusplus >= 201103
     cout << "c++11 or before" << endl;
-#else
+#else   // __cplusplus < 201103
 #   error "c++ is too old"
-#endif
+#endif  // __cplusplus >= 201402
 
 #if __GNUC__ <= 4
     cout << "gcc is too old" << endl;
-#else
+#else   // __GNUC__ > 4
     cout << "gcc is good enough" << endl;
-#endif
+#endif  // __GNUC__ <= 4
+
+#if defined(__SSE4_2__) && defined(__x86_64)
+    cout << "we can do more optimization" << endl;
+#endif  // defined(__SSE4_2__) && defined(__x86_64)
+
+#if __linux__
+    cout << "running on linux" << endl;
+#else   // not linux
+    cout << "running on others" << endl;
+#endif  //__linux__
 
 #ifndef NDEBUG
     cout << "debug mode" << endl;
-#endif
+#endif  // NDEBUG
 
 }
 
