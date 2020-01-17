@@ -24,6 +24,8 @@ void case1()
 
 #if __GNUC__ <= 4
     cout << "gcc is too old" << endl;
+#else
+    cout << "gcc is good enough" << endl;
 #endif
 
 #ifndef NDEBUG
