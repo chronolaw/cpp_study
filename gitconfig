@@ -1,0 +1,26 @@
+# Copyright (c) 2020 by Chrono
+
+[alias]
+st = status
+ci = commit
+br = branch
+co = checkout
+df = diff
+au = add -u .
+ll = log --oneline --graph
+lg = log --graph
+d = difftool
+pop = stash pop
+[core]
+editor = vim
+[color]
+	ui = true
+[diff]
+	tool = vimdiff
+[user]
+name = xxx
+email = xxx
+[merge]
+	tool = vimdiff
+[push]
+	default = matching
