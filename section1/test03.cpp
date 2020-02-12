@@ -38,6 +38,13 @@ void case1()
     cout << "running on others" << endl;
 #endif  //__linux__
 
+
+#if defined(__cpp_decltype_auto)
+    cout << "decltype(auto) enable" << endl;
+#else
+    cout << "decltype(auto) disable" << endl;
+#endif //__cpp_decltype_auto
+
 #ifndef NDEBUG
     cout << "debug mode" << endl;
 #endif  // NDEBUG
