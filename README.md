@@ -1,6 +1,6 @@
 # cpp_study
 
-follow me to study modern C++
+Follow me to study modern C++
 
 Pull requests of make/cmake are welcome!
 
@@ -12,9 +12,19 @@ Pull requests of make/cmake are welcome!
 
 ## Reference
 
+* [ISO C++](http://www.open-std.org/jtc1/sc22/wg21/)
 * [cppreference](https://en.cppreference.com/w/)
 
-## Resources
+
+## Resource
+
+* [Ubuntu](https://ubuntu.com/)
+* [Boost](https://www.boost.org/)
+* [GCC](http://gcc.gnu.org/)
+* [Clang](http://clang.llvm.org/)
+
+
+## Document
 
 * [CppCoreGuidelines](https://github.com/isocpp/CppCoreGuidelines)
 * [OpenResty Code Style Guide](http://openresty.org/cn/c-coding-style-guide.html)
