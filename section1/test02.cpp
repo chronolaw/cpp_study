@@ -5,45 +5,39 @@
 //
 
 #include <iostream>
+#include <string>
 
-#define BEGIN_NAMESPACE(x)  namespace x {
-#define END_NAMESPACE(x)    }
+using std::string;
 
-void case1()
-{
-    using std::cout;
-    using std::endl;
+#define  MAX_PATH_LEN  256
 
-    cout << "using std::xxx" << endl;
+int g_sys_flag;
+
+namespace linux_sys {
+  void get_rlimit_core();
 }
 
-void case2()
+class FilePath final
 {
-    using namespace std;
-
-    cout << "using namespace std" << endl;
-}
-
-BEGIN_NAMESPACE(my_own)
-
-class MyClass final
-{
+public:
+  void set_path(const string& str);
+private:
+  string m_path;
+  int    m_level;
 };
 
-void case3()
-{
-    using namespace std;
 
-    cout << "working in own namespace" << endl;
-}
-
-END_NAMESPACE(my_own)
+// author   : chrono
+// date     : 2020-xx-xx
+// purpose  : get inner counter value of generic T
+// notice   : T must have xxx member
+// notice   : return value maybe -1, means xxx, you should xxx
+template<typename T>
+int get_value(const T& v);
 
 int main()
 {
-    case1();
-    case2();
+    using namespace std;
 
-    my_own::case3();
-    my_own::MyClass obj;
+    cout << "show your code style." << endl;
 }

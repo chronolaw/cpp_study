@@ -6,9 +6,13 @@
 //
 // g++ test03.cpp -DNDEBUG -std=c++11 -o a.out;./a.out
 //
+// show all predefined macro:
 // gcc -E -dM - < /dev/null
 
 #include <iostream>
+
+#define BEGIN_NAMESPACE(x)  namespace x {
+#define END_NAMESPACE(x)    }
 
 void case1()
 {
@@ -51,7 +55,25 @@ void case1()
 
 }
 
+BEGIN_NAMESPACE(my_own)
+
+class MyClass final
+{
+};
+
+void case3()
+{
+    using namespace std;
+
+    cout << "working in own namespace" << endl;
+}
+
+END_NAMESPACE(my_own)
+
 int main()
 {
     case1();
+
+    my_own::case3();
+    my_own::MyClass obj;
 }
