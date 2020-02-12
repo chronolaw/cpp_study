@@ -1,5 +1,8 @@
 // Copyright (c) 2020 by Chrono
 //
+// pre-process source:
+// g++ test03.cpp -E -o a.cxx
+//
 // g++ test03.cpp -std=c++98 -o a.out;./a.out
 // g++ test03.cpp -std=c++11 -o a.out;./a.out
 // g++ test03.cpp -std=c++14 -o a.out;./a.out
@@ -9,12 +12,25 @@
 // show all predefined macro:
 // gcc -E -dM - < /dev/null
 
+// comment it for better pre-process output
 #include <iostream>
 
+// macro for convienient namespace
 #define BEGIN_NAMESPACE(x)  namespace x {
 #define END_NAMESPACE(x)    }
 
 void case1()
+{
+#
+#if __linux__
+#   define HAS_LINUX    1
+#endif
+#
+    using namespace std;
+    cout << "linux is " << HAS_LINUX << endl;
+}
+
+void case2()
 {
     using namespace std;
 
@@ -73,6 +89,7 @@ END_NAMESPACE(my_own)
 int main()
 {
     case1();
+    case2();
 
     my_own::case3();
     my_own::MyClass obj;
