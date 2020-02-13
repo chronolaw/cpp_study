@@ -10,7 +10,8 @@
 // g++ test03.cpp -DNDEBUG -std=c++11 -o a.out;./a.out
 //
 // show all predefined macro:
-// gcc -E -dM - < /dev/null
+// g++ -E -dM - < /dev/null
+// g++ -E -dM - < /dev/null > predef.cxx
 
 // comment it for better pre-process output
 #include <iostream>
@@ -66,6 +67,14 @@ void case3()
 }
 
 END_NAMESPACE(my_own)
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
+    void a_c_function(int a);
+#ifdef __cplusplus
+    }
+#endif
 
 void case4()
 {
