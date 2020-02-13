@@ -32,6 +32,43 @@ void case1()
 
 void case2()
 {
+#define CUBE(a) (a) * (a) * (a)
+
+    cout << CUBE(10) << endl;
+    cout << CUBE(15) << endl;
+
+#undef CUBE
+
+#ifdef AUTH_PWD
+#  undef AUTH_PWD
+#endif
+#define AUTH_PWD  "xxx"
+
+    cout << AUTH_PWD << endl;
+
+#define MAX_BUF_LEN  65535
+#define VERSION      "1.0.18"
+}
+
+// macro for convienient namespace
+#define BEGIN_NAMESPACE(x)  namespace x {
+#define END_NAMESPACE(x)    }
+
+BEGIN_NAMESPACE(my_own)
+
+class MyClass final
+{
+};
+
+void case3()
+{
+    cout << "working in own namespace" << endl;
+}
+
+END_NAMESPACE(my_own)
+
+void case4()
+{
 
 #if __cplusplus >= 201402
     cout << "c++14 or later" << endl;
@@ -68,32 +105,6 @@ void case2()
     cout << "debug mode" << endl;
 #endif  // NDEBUG
 
-}
-
-// macro for convienient namespace
-#define BEGIN_NAMESPACE(x)  namespace x {
-#define END_NAMESPACE(x)    }
-
-BEGIN_NAMESPACE(my_own)
-
-class MyClass final
-{
-};
-
-void case3()
-{
-    cout << "working in own namespace" << endl;
-}
-
-END_NAMESPACE(my_own)
-
-void case4()
-{
-#define CUBE(a) (a) * (a) * (a)
-
-    cout << CUBE(10) << endl;
-
-#undef CUBE
 }
 
 int main()
