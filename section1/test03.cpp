@@ -15,9 +15,10 @@
 // comment it for better pre-process output
 #include <iostream>
 
-// macro for convienient namespace
-#define BEGIN_NAMESPACE(x)  namespace x {
-#define END_NAMESPACE(x)    }
+using namespace std;
+
+// you can try this
+//#include "a.out"
 
 void case1()
 {
@@ -26,13 +27,11 @@ void case1()
 #   define HAS_LINUX    1
 #endif
 #
-    using namespace std;
     cout << "linux is " << HAS_LINUX << endl;
 }
 
 void case2()
 {
-    using namespace std;
 
 #if __cplusplus >= 201402
     cout << "c++14 or later" << endl;
@@ -71,6 +70,10 @@ void case2()
 
 }
 
+// macro for convienient namespace
+#define BEGIN_NAMESPACE(x)  namespace x {
+#define END_NAMESPACE(x)    }
+
 BEGIN_NAMESPACE(my_own)
 
 class MyClass final
@@ -79,12 +82,19 @@ class MyClass final
 
 void case3()
 {
-    using namespace std;
-
     cout << "working in own namespace" << endl;
 }
 
 END_NAMESPACE(my_own)
+
+void case4()
+{
+#define CUBE(a) (a) * (a) * (a)
+
+    cout << CUBE(10) << endl;
+
+#undef CUBE
+}
 
 int main()
 {
@@ -93,4 +103,6 @@ int main()
 
     my_own::case3();
     my_own::MyClass obj;
+
+    case4();
 }

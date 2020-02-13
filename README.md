@@ -27,7 +27,7 @@ Pull requests of make/cmake are welcome!
 ## Document
 
 * [Bjarne Stroustrup's C++11 FAQ](http://www.stroustrup.com/C++11FAQ.html)
-* [Cpp Core Guidelines](https://github.com/isocpp/CppCoreGuidelines)
+* [C++ Core Guidelines](https://github.com/isocpp/CppCoreGuidelines)
 * [OpenResty Code Style Guide](http://openresty.org/cn/c-coding-style-guide.html)
 * [Google Code Style Guide](https://google.github.io/styleguide/cppguide.html)
 
