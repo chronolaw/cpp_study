@@ -19,16 +19,22 @@ Pull requests of make/cmake are welcome!
 ## Resource
 
 * [Ubuntu](https://ubuntu.com/)
-* [Boost](https://www.boost.org/)
 * [GCC](http://gcc.gnu.org/)
 * [Clang](http://clang.llvm.org/)
 
 
 ## Dev Links
 
-* RapidJSON
-* MessagePack
-* ProtoBuf
+* [Boost](https://www.boost.org/)
+* [JSON](https://www.json.org/json-zh.html)
+* [RapidJSON](https://github.com/Tencent/rapidjson)
+* [JSON for Modern C++](https://github.com/nlohmann/json)
+* [MessagePack](https://msgpack.org/)
+* [msgpack-c](https://github.com/msgpack/msgpack-c)
+* [ProtoBuf](https://github.com/protocolbuffers/protobuf)
+* [Thrift](https://thrift.apache.org/)
+* [libcurl](https://curl.haxx.se/libcurl/)
+* [ZMQ](https://zeromq.org/)
 
 ## Document
 
