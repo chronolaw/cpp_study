@@ -24,6 +24,12 @@ Pull requests of make/cmake are welcome!
 * [Clang](http://clang.llvm.org/)
 
 
+## Dev Links
+
+* RapidJSON
+* MessagePack
+* ProtoBuf
+
 ## Document
 
 * [Bjarne Stroustrup's C++11 FAQ](http://www.stroustrup.com/C++11FAQ.html)
@@ -32,3 +38,11 @@ Pull requests of make/cmake are welcome!
 * [Google Code Style Guide](https://google.github.io/styleguide/cppguide.html)
 
 
+## See Also
+
+* [boost guide](https://github.com/chronolaw/boost_guide.git) - Sample code for Boost library Guide.
+* [professional_boost](https://github.com/chronolaw/professional_boost.git) - Professional boost development.
+* [annotated_nginx](https://github.com/chronolaw/annotated_nginx) - 注释nginx，学习研究源码
+* [ngx_ansic_dev](https://github.com/chronolaw/ngx_ansic_dev) - Nginc ANSI C Development
+* [openresty_dev](https://github.com/chronolaw/openresty_dev) - OpenResty/Lua Programming
+* [favorite-nginx](https://github.com/chronolaw/favorite-nginx) - Selected favorite nginx modules and resources.
