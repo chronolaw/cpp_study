@@ -23,6 +23,14 @@ Pull requests of make/cmake are welcome!
 * [Clang](http://clang.llvm.org/)
 
 
+## Document
+
+* [Bjarne Stroustrup's C++11 FAQ](http://www.stroustrup.com/C++11FAQ.html)
+* [C++ Core Guidelines](https://github.com/isocpp/CppCoreGuidelines)
+* [OpenResty Code Style Guide](http://openresty.org/cn/c-coding-style-guide.html)
+* [Google Code Style Guide](https://google.github.io/styleguide/cppguide.html)
+
+
 ## Dev Links
 
 * [Boost](https://www.boost.org/)
@@ -35,14 +43,6 @@ Pull requests of make/cmake are welcome!
 * [Thrift](https://thrift.apache.org/)
 * [libcurl](https://curl.haxx.se/libcurl/)
 * [ZMQ](https://zeromq.org/)
-
-## Document
-
-* [Bjarne Stroustrup's C++11 FAQ](http://www.stroustrup.com/C++11FAQ.html)
-* [C++ Core Guidelines](https://github.com/isocpp/CppCoreGuidelines)
-* [OpenResty Code Style Guide](http://openresty.org/cn/c-coding-style-guide.html)
-* [Google Code Style Guide](https://google.github.io/styleguide/cppguide.html)
-
 
 ## See Also
 
