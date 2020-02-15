@@ -11,6 +11,25 @@
 #include <stdexcept>
 #include <type_traits>
 
+template<int N>
+struct fib
+{
+    static const int value =
+        fib<N - 1>::value + fib<N - 2>::value;
+};
+
+template<>
+struct fib<0>
+{
+    static const int value = 1;
+};
+
+template<>
+struct fib<1>
+{
+    static const int value = 1;
+};
+
 //[[deprecated("deadline:2020-12-31")]]      // c+14 or later
 [[gnu::deprecated]] // c+11 or later
 int old_func()
@@ -67,6 +86,7 @@ void case3()
 
 void case4()
 {
+    static_assert(sizeof(int) == 4, "int must be 32bit");
     static_assert(sizeof(long) >= 8, "must run on x64");
 }
 
@@ -86,6 +106,12 @@ void check_type(T v)
 
 int main()
 {
+    using namespace std;
+
+    cout << fib<2>::value << endl;
+    cout << fib<3>::value << endl;
+    cout << fib<5>::value << endl;
+
     old_func();
     get_num();
 
