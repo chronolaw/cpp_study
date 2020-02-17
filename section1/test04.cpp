@@ -14,6 +14,8 @@
 template<int N>
 struct fib
 {
+    static_assert(N >= 0, "N must be postive");
+
     static const int value =
         fib<N - 1>::value + fib<N - 2>::value;
 };
@@ -110,6 +112,7 @@ int main()
 
     cout << fib<2>::value << endl;
     cout << fib<3>::value << endl;
+    cout << fib<4>::value << endl;
     cout << fib<5>::value << endl;
 
     old_func();
