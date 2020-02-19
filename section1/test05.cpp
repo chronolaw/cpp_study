@@ -48,6 +48,17 @@ public:
     DemoClass() = default;
    ~DemoClass() = default;
 
+    DemoClass(const DemoClass&) = delete;
+    DemoClass& operator=(const DemoClass&) = delete;
+public:
+    explicit DemoClass(const string_type& str)
+    {
+        m_name = str;
+    }
+    explicit operator bool ()
+    {
+        return !m_name.empty();
+    }
 public:
     void set_name(const string_type& str);
 
@@ -62,6 +73,41 @@ private:
 
 #endif
 
+#if 1
+
+class DemoDelegating final
+{
+private:
+    int a;
+public:
+    DemoDelegating(int x) : a(x)
+    {}
+
+    DemoDelegating() : DemoDelegating(0)
+    {}
+
+    DemoDelegating(const std::string& s) : DemoDelegating(std::stoi(s))
+    {}
+};
+
+#endif
+
+#if 1
+
+class DemoInit final
+{
+private:
+    int                 a = 0;
+    std::string         s = "hello";
+    std::vector<int>    v{1, 2, 3};
+public:
+    DemoInit() = default;
+   ~DemoInit() = default;
+public:
+    DemoInit(int x) : a(x) {}
+};
+
+#endif
 
 
 int main()
