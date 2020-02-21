@@ -45,6 +45,10 @@ Pull requests of make/cmake are welcome!
 * [libcurl](https://curl.haxx.se/libcurl/)
 * [ZMQ](https://zeromq.org/)
 
+
+* [Awesome C++](https://github.com/fffaraz/awesome-cpp)
+* [Awesome Mordern C++](https://github.com/rigtorp/awesome-modern-cpp)
+
 ## See Also
 
 * [boost guide](https://github.com/chronolaw/boost_guide.git) - Sample code for Boost library Guide
