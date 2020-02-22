@@ -7,7 +7,10 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <set>
 #include <map>
+
+#include <signal.h>
 
 void case1()
 {
@@ -74,6 +77,37 @@ void case4()
 
 void case5()
 {
+    int x = 0;
+
+    decltype(x)     x1;
+    decltype(x)&    x2 = x;
+    decltype(x)*    x3;
+    decltype(&x)    x4;
+    decltype(&x)*   x5;
+    decltype(x2)    x6 = x2;
+
+    using int_ptr = decltype(&x);
+    using int_ref = decltype(x)&;
+}
+
+void case6()
+{
+    int x = 0;
+
+    decltype(auto)     x1 = (x);
+    decltype(auto)     x2 = &x;
+    decltype(auto)     x3 = x1;
+}
+
+auto get_a_set()
+{
+    std::set<int> s = {1,2,3};
+
+    return s;
+}
+
+void case7()
+{
     using namespace std;
 
     vector<int> v = {2,3,5,7,11};
@@ -90,6 +124,19 @@ void case5()
     cout << endl;
 }
 
+class DemoClass final
+{
+public:
+    using sig_func_ptr_t = decltype(&signal) ;
+public:
+    using set_type      = std::set<int>;
+
+private:
+    set_type    m_set;
+
+    using iter_type = decltype(m_set.begin());
+    iter_type   m_pos;
+};
 
 int main()
 {
@@ -100,6 +147,8 @@ int main()
     case3();
     case4();
     case5();
+    case6();
+    case7();
 
     cout << "auto/decltype demo" << endl;
 }
