@@ -20,6 +20,48 @@ void case1()
 
 }
 
+void case2()
+{
+    using namespace std;
+
+    int x = 100;
+
+    const int& rx = x;
+    const int* px = &x;
+
+    cout << rx << *px << endl;
+
+    string name = "uncharted";
+
+    const string* ps1 = &name;
+    //*ps1 = "spiderman";
+
+    cout << *ps1 << endl;
+
+    string* const ps2 = &name;
+    *ps2 = "spiderman";
+
+    cout << *ps2 << endl;
+
+    const string* const ps3 = &name;
+}
+
+class DemoClass final
+{
+private:
+    using mutex_type = int; // dummy type
+private:
+    mutex_type  m_mutex;
+
+    const long  MAX_SIZE = 256;
+    int         m_value;
+public:
+    int get_value() const
+    {
+        return m_value;
+    }
+};
+
 
 constexpr
 int fib(int n)
@@ -36,6 +78,7 @@ int main()
     using namespace std;
 
     case1();
+    case2();
 
     constexpr
     int fib5 = fib(5);
