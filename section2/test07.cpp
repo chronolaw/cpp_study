@@ -6,6 +6,20 @@
 
 #include <iostream>
 
+void case1()
+{
+    using namespace std;
+
+    //const int MAX_LEN       = 1024;
+    const volatile int MAX_LEN       = 1024;
+    const std::string NAME  = "metroid";
+
+    auto ptr = (int*)(&MAX_LEN);
+    *ptr = 2048;
+    cout << MAX_LEN << endl;
+
+}
+
 
 constexpr
 int fib(int n)
@@ -20,6 +34,8 @@ int fib(int n)
 int main()
 {
     using namespace std;
+
+    case1();
 
     constexpr
     int fib5 = fib(5);
