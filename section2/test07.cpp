@@ -51,7 +51,7 @@ class DemoClass final
 private:
     using mutex_type = int; // dummy type
 private:
-    mutex_type  m_mutex;
+    mutable mutex_type  m_mutex;
 
     const long  MAX_SIZE = 256;
     int         m_value;
@@ -59,6 +59,11 @@ public:
     int get_value() const
     {
         return m_value;
+    }
+
+    void save_data() const
+    {
+        m_mutex++;
     }
 };
 
