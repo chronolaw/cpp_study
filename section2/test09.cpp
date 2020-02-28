@@ -21,12 +21,15 @@ public:
 
     my_exception() = default;
    ~my_exception() = default;
+private:
+    int code = 0;
 };
 
 [[noreturn]]
 void raise(const char* msg)
 {
-    throw runtime_error(msg);
+    throw my_exception(msg);
+    //throw runtime_error(msg);
 }
 
 void case1()
