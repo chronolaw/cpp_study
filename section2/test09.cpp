@@ -42,9 +42,21 @@ catch(const exception& e)
     cout << e.what() << endl;
 }
 
+void case2() noexcept
+{
+    cout << "noexcept" << endl;
+}
+
+void case3() noexcept
+{
+    throw "Oh My God";
+}
+
 int main()
 {
     case1();
+    case2();
+    //case3();
 
     cout << "exception demo" << endl;
 }
