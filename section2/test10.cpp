@@ -4,6 +4,7 @@
 // g++ test10.cpp -std=c++14 -I../common -o a.out;./a.out
 
 #include <iostream>
+#include <string>
 #include <vector>
 #include <algorithm>
 #include <functional>
@@ -108,15 +109,15 @@ public:
 private:
     int x = 0;
 public:
-    void print()
+    auto print()
     {
         //auto f = [=]()
-        auto f = [this]()
+
+        return [this]()
         {
             cout << "member = " << x << endl;
         };
 
-        f();
     }
 };
 
@@ -124,7 +125,23 @@ void case5()
 {
     DemoLambda obj;
 
-    obj.print();
+    auto f = obj.print();
+
+    f();
+}
+
+void case6()
+{
+    auto f = [](const auto& x)
+    {
+        return x + x;
+    };
+
+    cout << f(3) << endl;
+    cout << f(0.618) << endl;
+
+    string str = "matrix";
+    cout << f(str) << endl;
 }
 
 int main()
@@ -134,6 +151,7 @@ int main()
     case3();
     case4();
     case5();
+    case6();
 
     cout << "lambda demo" << endl;
 }
