@@ -33,6 +33,8 @@ void case2()
     auto str = "std string"s;
 
     assert(str.length() > 0);
+
+    assert("time"s.size() == 4);
 }
 
 int main()
