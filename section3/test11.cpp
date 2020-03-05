@@ -14,7 +14,14 @@ void case1()
 {
     using namespace std;
 
-    string str;
+    string str = "abc";
+
+    assert(str.length() == 3);
+    assert(str < "xyz");
+    assert(str.substr(0, 1) == "a");
+    assert(str.find("1") == string::npos);
+    assert(str + "d" == "abcd");
+
 
     str = "neir:automata";
     cout << str << endl;
