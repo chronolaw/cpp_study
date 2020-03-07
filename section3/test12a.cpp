@@ -22,7 +22,8 @@ using namespace std;
 
 class Point final
 {
-private:
+//private:
+public:
     int x = 0;
 public:
     Point(int a) noexcept : x(a)
@@ -84,7 +85,25 @@ void case2()
     assert(d.size() == 2);
 }
 
+bool operator<(const Point& a, const Point& b)
+{
+    return a.x < b.x;
+}
 
+void case3()
+{
+    set<Point> s;
+
+    s.emplace(7);
+    s.emplace(3);
+
+    for(auto& p : s) {
+        cout << p.x << ",";
+    }
+    cout << endl;
+}
+
+#if 0
 using complex_t = complex<double>;
 
 // add < compare to complex
@@ -107,6 +126,7 @@ void case3()
     }
     cout << endl;
 }
+#endif
 
 void case4()
 {
@@ -151,6 +171,29 @@ void case5()
     cout << endl;
 }
 
+bool operator==(const Point& a, const Point& b)
+{
+    return a.x == b.x;
+}
+
+void case6()
+{
+    auto hasher = [](const auto& p)
+    {
+        return std::hash<int>()(p.x);
+    };
+
+    unordered_set<Point, decltype(hasher)> s(10, hasher);
+
+    s.emplace(7);
+    s.emplace(3);
+
+    for(auto& p : s) {
+        cout << p.x << ",";
+    }
+    cout << endl;
+}
+
 
 int main()
 {
@@ -159,6 +202,7 @@ int main()
     case3();
     case4();
     case5();
+    case6();
 
     cout << "containter demo" << endl;
 }
