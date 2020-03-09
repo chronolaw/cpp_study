@@ -76,14 +76,16 @@ void case3()
 
 void case4()
 {
+#if 1
     vector<int> v = {3,5,1,7,10};
 
     for(const auto& x : v) {
         cout << x << ",";
     }
+#endif
     cout << endl;
 
-#if 0
+#if 1
     auto print = [](const auto& x)
     {
         cout << x << ",";
@@ -91,6 +93,7 @@ void case4()
 
     for_each(cbegin(v), cend(v), print);
 #endif
+    cout << endl;
 
 #if 1
     for_each(
@@ -101,8 +104,43 @@ void case4()
         }
     );
 #endif
-
     cout << endl;
+}
+
+void case5()
+{
+    vector<int> v = {3,5,1,7,10,99,42};
+
+    auto print = [](const auto& x)
+    {
+        cout << x << ",";
+    };
+
+    // total sort
+    std::sort(begin(v), end(v));
+    for_each(cbegin(v), cend(v), print);
+    cout << endl;
+
+    // top3
+    std::partial_sort(
+        begin(v), next(begin(v), 3), end(v));
+    for_each(cbegin(v), cend(v), print);
+    cout << endl;
+
+    // best3
+    std::nth_element(
+        begin(v), next(begin(v), 3), end(v));
+    for_each(cbegin(v), cend(v), print);
+    cout << endl;
+
+    // Median
+    auto mid_iter =
+        next(begin(v), v.size()/2);
+    std::nth_element( begin(v), mid_iter, end(v));
+    for_each(cbegin(v), cend(v), print);
+    cout << "median is " << *mid_iter <<endl;
+
+
 }
 
 int main()
@@ -111,6 +149,7 @@ int main()
     case2();
     case3();
     case4();
+    case5();
 
     using namespace std;
 
