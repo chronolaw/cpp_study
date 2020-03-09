@@ -84,12 +84,12 @@ void case4()
     cout << endl;
 
 #if 0
-    auto f = [](const auto& x)
+    auto print = [](const auto& x)
     {
         cout << x << ",";
     };
 
-    for_each(cbegin(v), cend(v), f);
+    for_each(cbegin(v), cend(v), print);
 #endif
 
 #if 1
