@@ -138,9 +138,27 @@ void case5()
         next(begin(v), v.size()/2);
     std::nth_element( begin(v), mid_iter, end(v));
     for_each(cbegin(v), cend(v), print);
-    cout << "median is " << *mid_iter <<endl;
+    cout << "median is " << *mid_iter << endl;
 
+    // partition
+    auto pos = std::partition(
+        begin(v), end(v),
+        [](const auto& x)
+        {
+            return x > 9;
+        }
+    );
+    for_each(begin(v), pos, print);
+    cout << endl;
+    for_each(cbegin(v), cend(v), print);
+    cout << endl;
 
+    // min/max
+    auto value = std::minmax_element(
+        cbegin(v), cend(v)
+    );
+    cout << *value.first << ","
+         << *value.second << endl;
 }
 
 int main()
