@@ -161,6 +161,26 @@ void case5()
          << *value.second << endl;
 }
 
+void case6()
+{
+    vector<int> v = {3,5,1,7,10,99,42};
+
+    auto print = [](const auto& x)
+    {
+        cout << x << ",";
+    };
+
+    // total sort
+    std::sort(begin(v), end(v));
+    for_each(cbegin(v), cend(v), print);
+    cout << endl;
+
+    auto found = binary_search(
+        cbegin(v), cend(v), 7
+    );
+    cout << "found: " << found << endl;
+}
+
 int main()
 {
     case1();
@@ -168,6 +188,7 @@ int main()
     case3();
     case4();
     case5();
+    case6();
 
     using namespace std;
 
