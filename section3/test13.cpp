@@ -238,12 +238,27 @@ void case7()
 
 void case8()
 {
-    vector<int> v = {1,3,5,7,9,11};
+    vector<int> v = {1,9,11,3,5,7};
 
     decltype(v.end()) pos;
 
     pos = std::find(
         begin(v), end(v), 3
+    );
+    assert(pos != end(v));
+
+    pos =std::find_if(
+        begin(v), end(v),
+        [](auto x) {
+            return x % 2 == 0;
+        }
+    );
+    assert(pos == end(v));
+
+    array<int, 2> arr = {3,5};
+    pos = std::find_first_of(
+        begin(v), end(v),
+        begin(arr), end(arr)
     );
     assert(pos != end(v));
 }
