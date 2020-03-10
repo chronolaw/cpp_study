@@ -7,6 +7,7 @@
 //
 // gcc -E -dM - < /dev/null
 
+#include <typeinfo>
 #include <iostream>
 #include <stdexcept>
 #include <type_traits>
@@ -125,4 +126,6 @@ int main()
 
     check_type(10);
     //check_type((void*)0);
+
+    cout << "compile stage demo" << endl;
 }

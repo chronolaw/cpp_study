@@ -125,4 +125,6 @@ int main()
     my_own::MyClass obj;
 
     case4();
+
+    cout << "pre-process demo" << endl;
 }
