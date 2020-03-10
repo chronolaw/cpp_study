@@ -10,6 +10,7 @@
 
 #include <array>
 #include <vector>
+#include <set>
 #include <algorithm>
 
 using namespace std;
@@ -179,6 +180,72 @@ void case6()
         cbegin(v), cend(v), 7
     );
     cout << "found: " << found << endl;
+
+    decltype(cend(v)) pos;
+
+    pos = std::lower_bound(
+        cbegin(v), cend(v), 7
+    );
+    //assert(pos != cend(v));
+    //assert(*pos == 7);
+    found = (pos != cend(v)) && (*pos == 7);
+    assert(found);
+
+    pos = std::lower_bound(
+        cbegin(v), cend(v), 9
+    );
+    //assert(pos != cend(v));
+    //cout << *pos << endl;
+    found = (pos != cend(v)) && (*pos == 9);
+    assert(!found);
+
+    pos = std::upper_bound(
+        cbegin(v), cend(v), 9
+    );
+    //cout << *pos << endl;
+
+    auto range = std::equal_range(
+        cbegin(v), cend(v), 9
+    );
+    //cout << *range.first << endl;
+    //cout << *range.second << endl;
+    for_each(
+        range.first, std::next(range.second), print
+    );
+    cout << endl;
+}
+
+void case7()
+{
+    multiset<int> s = {3,5,1,7,7,7,10,99,42};
+
+    auto print = [](const auto& x)
+    {
+        cout << x << ",";
+    };
+
+    auto pos = s.find(7);
+    assert(pos != s.end());
+
+    auto lower_pos = s.lower_bound(7);
+    auto upper_pos = s.upper_bound(7);
+
+    for_each(
+        lower_pos, upper_pos, print
+    );
+    cout << endl;
+}
+
+void case8()
+{
+    vector<int> v = {1,3,5,7,9,11};
+
+    decltype(v.end()) pos;
+
+    pos = std::find(
+        begin(v), end(v), 3
+    );
+    assert(pos != end(v));
 }
 
 int main()
@@ -189,6 +256,8 @@ int main()
     case4();
     case5();
     case6();
+    case7();
+    case8();
 
     using namespace std;
 
