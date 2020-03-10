@@ -11,6 +11,27 @@
 
 using namespace std;
 
+void case1()
+{
+    //static int n = 0;
+    thread_local int n = 0;
+
+    auto f = [&](int x)
+    {
+        n += x;
+
+        cout << n;
+        cout << ", tid=" <<
+            this_thread::get_id() << endl;
+    };
+
+    thread t1(f, 10);
+    thread t2(f, 20);
+
+    t1.join();
+    t2.join();
+}
+
 void case3()
 {
     static once_flag flag;
@@ -36,6 +57,7 @@ void case3()
 
 int main()
 {
+    case1();
     case3();
 
     cout << "thread demo" << endl;
