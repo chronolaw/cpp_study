@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <future>
 #include <thread>
 
 using namespace std;
@@ -84,11 +85,50 @@ void case3()
     t2.join();
 }
 
+#if 0
+
+int fib(int n)
+{
+    if (n < 2) {
+        return 1;
+    }
+
+    return fib(n-1) + fib(n-2);
+};
+
+void case4()
+{
+    auto f1 = std::async(fib, 20);
+
+    cout << "future async ..." << endl;
+
+    f1.wait();
+    cout << f1.get() << endl;
+}
+#endif
+
+void case4()
+{
+    auto task = [](auto x)
+    {
+        using namespace std::chrono_literals;
+
+        this_thread::sleep_for( x * 1ms);
+
+        cout << "sleep for " << x << endl;
+    };
+
+    auto f = std::async(task, 10);
+
+    f.wait();
+}
+
 int main()
 {
     case1();
     case2();
     case3();
+    case4();
 
     cout << "thread demo" << endl;
 }
