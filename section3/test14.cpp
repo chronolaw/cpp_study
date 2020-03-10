@@ -6,6 +6,7 @@
 
 #include <iostream>
 
+#include <atomic>
 #include <mutex>
 #include <thread>
 
@@ -32,7 +33,7 @@ void case1()
     t2.join();
 }
 
-void case3()
+void case2()
 {
     static once_flag flag;
 
@@ -55,9 +56,38 @@ void case3()
     t2.join();
 }
 
+void case3()
+{
+    static atomic_flag flag {false};
+    static atomic_int  n;
+
+    auto f = [&]()
+    {
+        auto value = flag.test_and_set();
+
+        if (value) {
+            cout << "flag has been set." << endl;
+        } else {
+            cout << "set flag by " <<
+                this_thread::get_id() << endl;
+        }
+
+        n += 100;
+        cout << n << endl;
+
+    };
+
+    thread t1(f);
+    thread t2(f);
+
+    t1.join();
+    t2.join();
+}
+
 int main()
 {
     case1();
+    case2();
     case3();
 
     cout << "thread demo" << endl;
