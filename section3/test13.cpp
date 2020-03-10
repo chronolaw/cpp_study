@@ -247,7 +247,7 @@ void case8()
     );
     assert(pos != end(v));
 
-    pos =std::find_if(
+    pos = std::find_if(
         begin(v), end(v),
         [](auto x) {
             return x % 2 == 0;
