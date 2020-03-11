@@ -4,6 +4,8 @@
 // g++ test14.cpp -lpthread -std=c++14 -o a.out;./a.out
 // g++ test14.cpp -lpthread -std=c++14 -I../common -o a.out;./a.out
 
+#include <cassert>
+
 #include <iostream>
 
 #include <atomic>
@@ -60,6 +62,13 @@ void case2()
 
 void case3()
 {
+    atomic_int  x {0};
+    atomic_long y {1000L};
+
+    assert(++x == 1);
+    y += 200;
+    assert(y < 2000);
+
     static atomic_flag flag {false};
     static atomic_int  n;
 
