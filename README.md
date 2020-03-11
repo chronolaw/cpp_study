@@ -35,6 +35,7 @@ Pull requests of make/cmake are welcome!
 ## Dev Links
 
 * [Boost](https://www.boost.org/)
+* [tbb](https://github.com/intel/tbb)
 * [JSON](https://www.json.org/json-zh.html)
 * [RapidJSON](https://github.com/Tencent/rapidjson)
 * [JSON for Modern C++](https://github.com/nlohmann/json)
