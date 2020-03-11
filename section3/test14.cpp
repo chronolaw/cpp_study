@@ -105,6 +105,7 @@ void case4()
     f1.wait();
     cout << f1.get() << endl;
 }
+
 #endif
 
 void case4()
