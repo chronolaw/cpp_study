@@ -84,6 +84,10 @@ void case3()
         }
 
         n += 100;
+
+        //using namespace std::chrono_literals;
+
+        this_thread::sleep_for(n.load() * 10ms);
         cout << n << endl;
 
     };
@@ -122,16 +126,27 @@ void case4()
 {
     auto task = [](auto x)
     {
-        using namespace std::chrono_literals;
+        //using namespace std::chrono_literals;
 
         this_thread::sleep_for( x * 1ms);
 
         cout << "sleep for " << x << endl;
+
+        return x;
     };
 
     auto f = std::async(task, 10);
 
     f.wait();
+
+    //cout << f.valid() << endl;
+
+    assert(f.valid());
+    cout << f.get() << endl;
+    assert(!f.valid());
+
+    //cout << f.get() << endl;
+    //cout << f.valid() << endl;
 }
 
 int main()
