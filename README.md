@@ -42,9 +42,13 @@ Pull requests of make/cmake are welcome!
 * [MessagePack](https://msgpack.org/)
 * [msgpack-c](https://github.com/msgpack/msgpack-c)
 * [ProtoBuf](https://github.com/protocolbuffers/protobuf)
+* [protobuf-c](https://github.com/protobuf-c/protobuf-c)
 * [Thrift](https://thrift.apache.org/)
 * [libcurl](https://curl.haxx.se/libcurl/)
 * [ZMQ](https://zeromq.org/)
+* [pybind11](https://github.com/pybind/pybind11)
+* [luajit](http://luajit.org/)
+* [luajit-openresty](https://github.com/openresty/luajit2)
 
 
 * [Awesome C++](https://github.com/fffaraz/awesome-cpp)
