@@ -1,5 +1,8 @@
 // Copyright (c) 2020 by Chrono
 //
+// sudo apt-get remove libcurl4
+// sudo apt-get install libcurl4-openssl-dev
+//
 // curl-config --libs
 // curl-config --version
 // curl-config --features

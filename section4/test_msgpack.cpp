@@ -1,5 +1,7 @@
 // Copyright (c) 2020 by Chrono
 //
+// sudo apt-get install libmsgpack-dev
+//
 // g++ test_msgpack.cpp -std=c++11 -lmsgpackc -o a.out;./a.out
 // g++ test_msgpack.cpp -std=c++14 -lmsgpackc -o a.out;./a.out
 
