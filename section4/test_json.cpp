@@ -13,13 +13,15 @@ using json_t = nlohmann::json;
 
 void case1()
 {
+    cout << json_t::meta().dump(2) << endl;
+
     json_t j;
     j["age"] = 23;
     j["name"] = "spiderman";
     j["jobs"] = {"superhero", "neighborhood"};
     j["gear"]["suits"] = "2099";
 
-    cout << j.dump() << endl;
+    cout << j << endl;
 }
 
 void case2()
