@@ -4,6 +4,7 @@
 
 #include <iostream>
 
+// you should put json.hpp in ../common
 #include "json.hpp"
 
 using namespace std;
@@ -41,7 +42,7 @@ void case3()
         "married" : true
     })";
 
-    json_t j = json_t::parse(str);
+    auto j = json_t::parse(str);
 
     cout << j.dump(2) << endl;
 }
