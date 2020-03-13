@@ -33,10 +33,24 @@ void case2()
     cout << j.dump(2) << endl;
 }
 
+void case3()
+{
+    string str = R"({
+        "name": "peter",
+        "age" : 23,
+        "married" : true
+    })";
+
+    json_t j = json_t::parse(str);
+
+    cout << j.dump(2) << endl;
+}
+
 int main()
 {
     case1();
     case2();
+    case3();
 
     cout << "json demo" << endl;
 }
