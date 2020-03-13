@@ -45,6 +45,7 @@ Pull requests of make/cmake are welcome!
 * [protobuf-c](https://github.com/protobuf-c/protobuf-c)
 * [Thrift](https://thrift.apache.org/)
 * [libcurl](https://curl.haxx.se/libcurl/)
+* [cpr](https://github.com/whoshuu/cpr)
 * [ZMQ](https://zeromq.org/)
 * [pybind11](https://github.com/pybind/pybind11)
 * [luajit](http://luajit.org/)
