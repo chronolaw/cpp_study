@@ -8,8 +8,8 @@
 // curl-config --features
 // curl-config --protocols
 //
-// g++ test_curl.cpp -std=c++11 -lcurl -o a.out;./a.out
-// g++ test_curl.cpp -std=c++14 -lcurl -o a.out;./a.out
+// g++ curl.cpp -std=c++11 -lcurl -o a.out;./a.out
+// g++ curl.cpp -std=c++14 -lcurl -o a.out;./a.out
 
 #include <iostream>
 

@@ -2,8 +2,8 @@
 //
 // sudo apt-get install libmsgpack-dev
 //
-// g++ test_msgpack.cpp -std=c++11 -lmsgpackc -o a.out;./a.out
-// g++ test_msgpack.cpp -std=c++14 -lmsgpackc -o a.out;./a.out
+// g++ msgpack.cpp -std=c++11 -lmsgpackc -o a.out;./a.out
+// g++ msgpack.cpp -std=c++14 -lmsgpackc -o a.out;./a.out
 
 #include <iostream>
 
