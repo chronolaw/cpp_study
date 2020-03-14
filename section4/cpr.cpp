@@ -4,8 +4,8 @@
 // cmake . -DUSE_SYSTEM_CURL=ON -DBUILD_CPR_TESTS=OFF
 // make && make install
 //
-// g++ cpr.cpp -std=c++11 -lcpr -lcurl -o a.out;./a.out
-// g++ cpr.cpp -std=c++14 -lcpr -lcurl -o a.out;./a.out
+// g++ cpr.cpp -std=c++11 -lcpr -lpthread -lcurl -o a.out;./a.out
+// g++ cpr.cpp -std=c++14 -lcpr -lpthread -lcurl -o a.out;./a.out
 
 #include <iostream>
 
@@ -15,17 +15,34 @@ using namespace std;
 
 void case1()
 {
-    auto resp = cpr::Get(
+    auto res = cpr::Get(
                 cpr::Url{"http://nginx.org"},
                 cpr::Parameters{{"key", "value"}}
     );
 
-    cout << resp.url << endl;
-    cout << resp.status_code << endl;
-    cout << resp.header["server"] << endl;
-    cout << resp.text.length() << endl;
+    cout << res.url << endl;
+    cout << res.status_code << endl;
+    cout << res.elapsed << endl;
+    cout << res.header["server"] << endl;
+    cout << res.text.length() << endl;
 
-    for(auto& x : resp.header) {
+    for(auto& x : res.header) {
+        cout << x.first << "=>"
+             << x.second << endl;
+    }
+}
+
+void case2()
+{
+    auto f = cpr::GetAsync(
+                cpr::Url{"http://openresty.org"}
+    );
+
+    auto res = f.get();
+
+    cout << res.elapsed << endl;
+
+    for(auto& x : res.header) {
         cout << x.first << "=>"
              << x.second << endl;
     }
@@ -34,6 +51,7 @@ void case1()
 int main()
 {
     case1();
+    case2();
 
     cout << "libcpr demo" << endl;
 }
