@@ -2,13 +2,18 @@
 //
 // sudo apt-get install libmsgpack-dev
 //
+// /usr/include/msgpack
 // g++ msgpack.cpp -std=c++11 -lmsgpackc -o a.out;./a.out
 // g++ msgpack.cpp -std=c++14 -lmsgpackc -o a.out;./a.out
 
 #include <iostream>
 
-#include <msgpack/pack.hpp>
-#include <msgpack/unpack.hpp>
+#include <msgpack.hpp>
+
+void case1()
+{
+    //msgpack::type::tuple<>
+}
 
 int main()
 {
