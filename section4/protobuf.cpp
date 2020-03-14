@@ -11,10 +11,13 @@
 #include <cassert>
 
 #include <iostream>
+#include <vector>
 
 // just for convient
 //#include "sample.pb.h"
 #include "sample.pb.cc"
+
+using namespace std;
 
 void case1()
 {
@@ -33,6 +36,15 @@ void case1()
     assert(v.has_name() && v.name() == "sony");
     assert(v.has_valid() && v.valid());
 
+    cout << v.ByteSize() << endl;
+
+    vector<unsigned char> buffer(v.ByteSize());
+
+    v.SerializeWithCachedSizesToArray(buffer.data());
+
+    //using pb_ostream_t = google::protobuf::io::CodedOutputStream;
+    //pb_ostream_t os;
+    //v.SerializeWithCachedSizes(&os);
 }
 
 void case2()
@@ -47,6 +59,7 @@ void case2()
     v->set_id(1);
     v->set_name("sony");
     v->set_valid(true);
+    assert(v->IsInitialized());
 
     using product_t = sample::Product;
 
@@ -65,10 +78,10 @@ void case2()
 
 int main()
 {
+    //GOOGLE_PROTOBUF_VERIFY_VERSION;
+
     case1();
     case2();
-
-    using namespace std;
 
     cout << "protobuf demo" << endl;
 }
