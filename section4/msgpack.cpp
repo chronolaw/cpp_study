@@ -61,10 +61,33 @@ void case2()
     cout << book2.title << endl;
 }
 
+void case3()
+{
+    msgpack::sbuffer sbuf;
+    msgpack::packer<decltype(sbuf)> packer(sbuf);
+
+    packer.pack(10).pack("monado"s)
+          .pack(vector<int>{1,2,3});
+
+    cout << sbuf.size() << endl;
+
+    for(decltype(sbuf.size()) offset = 0;
+        offset != sbuf.size();){
+
+        auto handle = msgpack::unpack(
+                sbuf.data(), sbuf.size(), offset);
+        auto obj = handle.get();
+        cout << obj << endl;
+    }
+
+}
+
 int main()
 {
     case1();
     case2();
+    case3();
 
+    cout << msgpack_version() << endl;
     cout << "msgpack demo" << endl;
 }
