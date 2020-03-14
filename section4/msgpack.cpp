@@ -80,6 +80,23 @@ void case3()
         cout << obj << endl;
     }
 
+#if 0
+    cout << "lambda " << endl;
+    for(decltype(sbuf.size()) offset = 0;
+        offset != sbuf.size();){
+
+        auto handle = msgpack::unpack(
+                sbuf.data(), sbuf.size(), offset,
+
+                [](auto type, auto len, auto data)
+                {
+                    cout << type << ":" << len << endl;
+                    return true;
+                }
+
+                );
+    }
+#endif
 }
 
 int main()
