@@ -11,9 +11,29 @@
 
 #include <cpr/cpr.h>
 
+using namespace std;
+
+void case1()
+{
+    auto resp = cpr::Get(
+                cpr::Url{"http://nginx.org"},
+                cpr::Parameters{{"key", "value"}}
+    );
+
+    cout << resp.url << endl;
+    cout << resp.status_code << endl;
+    cout << resp.header["server"] << endl;
+    cout << resp.text.length() << endl;
+
+    for(auto& x : resp.header) {
+        cout << x.first << "=>"
+             << x.second << endl;
+    }
+}
+
 int main()
 {
-    using namespace std;
+    case1();
 
     cout << "libcpr demo" << endl;
 }
