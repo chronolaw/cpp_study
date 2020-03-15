@@ -63,4 +63,6 @@ int main()
 
     cout << curl_version() << endl;
     cout << "libcurl demo" << endl;
+
+    //curl_global_cleanup();
 }
