@@ -26,27 +26,39 @@ void case1()
         return zmq::socket_t(context, mode);
     };
 
-    //zmq::socket_t sock1(context, ZMQ_PUSH);
-    auto sock1 = make_sock(ZMQ_PUSH);
+    auto receiver = [=]()
+    {
+        auto sock = make_sock(ZMQ_PULL);
 
-    sock1.connect(addr);
+        sock.bind(addr);
+        assert(sock.connected());
 
-    auto str = "hello zmq"s;
+        zmq::message_t msg;
 
-    sock1.send(begin(str), end(str));
+        sock.recv(&msg);
 
-    auto sock2 = make_sock(ZMQ_PULL);
+        cout << msg.size() << endl;
 
-    sock2.bind(addr);
+        string s = {msg.data<char>(), msg.size()};
+        cout << s << endl;
+    };
 
-    zmq::message_t msg;
+    auto sender = [=]()
+    {
+        auto sock = make_sock(ZMQ_PUSH);
 
-    sock2.recv(&msg);
+        sock.connect(addr);
+        assert(sock.connected());
 
-    cout << msg.size() << endl;
+        string s = "hello zmq";
+        //zmq::message_t msg(begin(s), end(s));
+        //sock.send(msg);
 
-    string s = {msg.data<char>(), msg.size()};
-    cout << s << endl;
+        sock.send(begin(s), end(s));
+    };
+
+    sender();
+    receiver();
 }
 
 void case2()
