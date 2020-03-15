@@ -68,6 +68,9 @@ void case2()
     {
         auto sock = make_sock(ZMQ_PULL);
 
+        sock.setsockopt(ZMQ_LINGER, 0);
+        sock.setsockopt(ZMQ_RCVHWM, 1000);
+
         sock.bind(addr);
         assert(sock.connected());
 
@@ -84,6 +87,8 @@ void case2()
     auto client = [=](int i)
     {
         auto sock = make_sock(ZMQ_PUSH);
+
+        sock.setsockopt(ZMQ_SNDHWM, 100);
 
         sock.connect(addr);
         assert(sock.connected());
@@ -106,6 +111,12 @@ void case2()
 
 int main()
 {
+    int a, b, c;
+    std::tie(a, b, c) = zmq::version();
+
+    cout << "version = "
+         << a << b << c << endl;
+
     case1();
     case2();
 
