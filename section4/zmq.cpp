@@ -53,7 +53,7 @@ void case1()
         //zmq::message_t msg(begin(s), end(s));
         //sock.send(msg);
 
-        sock.send(begin(s), end(s));
+        sock.send(s.data(), s.size());
     };
 
     sender();
@@ -97,7 +97,8 @@ void case2()
         //zmq::message_t msg(begin(s), end(s));
         //sock.send(msg);
 
-        sock.send(begin(s), end(s));
+        //sock.send(begin(s), end(s));
+        sock.send(s.data(), s.size());
     };
 
     auto f = std::async(srv);
