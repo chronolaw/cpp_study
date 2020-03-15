@@ -34,3 +34,4 @@
 # own config
 a.out
 *.swp
+*.pb.*
