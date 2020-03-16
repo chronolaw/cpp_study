@@ -4,8 +4,9 @@
 // sudo apt-get install libprotobuf-dev
 // sudo apt-get install libprotoc-dev
 //
+// protoc --cpp_out=. sample.proto
+//
 // g++ protobuf.cpp -std=c++11 -lprotobuf -o a.out;./a.out
-// g++ protobuf.cpp -std=c++14 -lprotobuf -o a.out;./a.out
 // g++ protobuf.cpp -std=c++14 -lprotobuf -o a.out;./a.out
 
 #include <cassert>
@@ -36,15 +37,16 @@ void case1()
     assert(v.has_name() && v.name() == "sony");
     assert(v.has_valid() && v.valid());
 
-    cout << v.ByteSize() << endl;
+    cout << v.DebugString() << endl;
 
-    vector<unsigned char> buffer(v.ByteSize());
+    string enc;
+    v.SerializeToString(&enc);
 
-    v.SerializeWithCachedSizesToArray(buffer.data());
+    vendor_t v2;
+    assert(!v2.IsInitialized());
+    v2.ParseFromString(enc);
 
-    //using pb_ostream_t = google::protobuf::io::CodedOutputStream;
-    //pb_ostream_t os;
-    //v.SerializeWithCachedSizes(&os);
+    assert(v.id() == v2.id());
 }
 
 void case2()
