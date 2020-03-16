@@ -3,8 +3,13 @@
 // sudo apt-get install libmsgpack-dev
 //
 // /usr/include/msgpack
+//
 // g++ msgpack.cpp -std=c++11 -o a.out;./a.out
 // g++ msgpack.cpp -std=c++14 -o a.out;./a.out
+//
+// source include
+// g++ msgpack.cpp -std=c++11 -I../common/include -o a.out;./a.out
+// g++ msgpack.cpp -std=c++14 -I../common/include -o a.out;./a.out
 
 #include <iostream>
 #include <string>
@@ -12,6 +17,10 @@
 #include <algorithm>
 
 #include <msgpack.hpp>
+
+#if MSGPACK_VERSION_MAJOR < 3
+#   error "msgpack  is too old."
+#endif
 
 using namespace std;
 
@@ -28,7 +37,8 @@ void case1()
     auto obj = handle.get();
     cout << obj << endl;
 
-    decltype(v) v2;
+    //decltype(v) v2;
+    vector<int> v2;
     obj.convert(v2);
 
     assert(std::equal(begin(v), end(v), begin(v2)));
@@ -45,23 +55,6 @@ public:
 };
 
 void case2()
-{
-    Book book1 = {1, "1984", {"a","b"}};
-
-    msgpack::sbuffer sbuf;
-    msgpack::pack(sbuf, book1);
-
-    auto obj = msgpack::unpack(sbuf.data(), sbuf.size()).get();
-
-    Book book2;
-    obj.convert(book2);
-
-    assert(book2.id == book1.id);
-    assert(book2.tags.size() == 2);
-    cout << book2.title << endl;
-}
-
-void case3()
 {
     msgpack::sbuffer sbuf;
     msgpack::packer<decltype(sbuf)> packer(sbuf);
@@ -97,6 +90,23 @@ void case3()
                 );
     }
 #endif
+}
+
+void case3()
+{
+    Book book1 = {1, "1984", {"a","b"}};
+
+    msgpack::sbuffer sbuf;
+    msgpack::pack(sbuf, book1);
+
+    auto obj = msgpack::unpack(sbuf.data(), sbuf.size()).get();
+
+    Book book2;
+    obj.convert(book2);
+
+    assert(book2.id == book1.id);
+    assert(book2.tags.size() == 2);
+    cout << book2.title << endl;
 }
 
 int main()
