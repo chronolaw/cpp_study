@@ -1,5 +1,7 @@
 // Copyright (c) 2020 by Chrono
 //
+// sudo apt-get install libzmq3-dev
+//
 // g++ zmq.cpp -std=c++14 -lzmq -lpthread -o a.out;./a.out
 
 #include <iostream>
