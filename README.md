@@ -45,6 +45,7 @@ Pull requests of make/cmake are welcome!
 * [protobuf-c](https://github.com/protobuf-c/protobuf-c)
 * [Thrift](https://thrift.apache.org/)
 * [libcurl](https://curl.haxx.se/libcurl/)
+* [cpr](https://github.com/whoshuu/cpr)
 * [ZMQ](https://zeromq.org/)
 * [pybind11](https://github.com/pybind/pybind11)
 * [luajit](http://luajit.org/)
@@ -60,6 +61,6 @@ Pull requests of make/cmake are welcome!
 * [professional_boost](https://github.com/chronolaw/professional_boost.git) - Professional boost development
 * [annotated_nginx](https://github.com/chronolaw/annotated_nginx) - 注释nginx，学习研究源码
 * [ngx_cpp_dev](https://github.com/chronolaw/ngx_cpp_dev) - Nginx C++ development kit, with the power of C++11 and Boost Library
-* [ngx_ansic_dev](https://github.com/chronolaw/ngx_ansic_dev) - Nginc ANSI C Development
+* [ngx_ansic_dev](https://github.com/chronolaw/ngx_ansic_dev) - Nginx ANSI C Development
 * [openresty_dev](https://github.com/chronolaw/openresty_dev) - OpenResty/Lua Programming
 * [favorite-nginx](https://github.com/chronolaw/favorite-nginx) - Selected favorite nginx modules and resources

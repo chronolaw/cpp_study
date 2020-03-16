@@ -1,13 +1,13 @@
 // Copyright (c) 2020 by Chrono
 //
 // pre-process source:
-// g++ test03.cpp -E -o a.cxx
+// g++ preprocess.cpp -E -o a.cxx
 //
-// g++ test03.cpp -std=c++98 -o a.out;./a.out
-// g++ test03.cpp -std=c++11 -o a.out;./a.out
-// g++ test03.cpp -std=c++14 -o a.out;./a.out
+// g++ preprocess.cpp -std=c++98 -o a.out;./a.out
+// g++ preprocess.cpp -std=c++11 -o a.out;./a.out
+// g++ preprocess.cpp -std=c++14 -o a.out;./a.out
 //
-// g++ test03.cpp -DNDEBUG -std=c++11 -o a.out;./a.out
+// g++ preprocess.cpp -DNDEBUG -std=c++11 -o a.out;./a.out
 //
 // show all predefined macro:
 // g++ -E -dM - < /dev/null
