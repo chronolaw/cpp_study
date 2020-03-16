@@ -44,16 +44,6 @@ void case1()
     assert(std::equal(begin(v), end(v), begin(v2)));
 }
 
-class Book final
-{
-public:
-    int         id;
-    string      title;
-    set<string> tags;
-public:
-    MSGPACK_DEFINE(id, title, tags);
-};
-
 void case2()
 {
     msgpack::sbuffer sbuf;
@@ -91,6 +81,16 @@ void case2()
     }
 #endif
 }
+
+class Book final
+{
+public:
+    int         id;
+    string      title;
+    set<string> tags;
+public:
+    MSGPACK_DEFINE(id, title, tags);
+};
 
 void case3()
 {
