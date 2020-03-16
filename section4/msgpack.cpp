@@ -109,11 +109,27 @@ void case3()
     cout << book2.title << endl;
 }
 
+void case4()
+{
+    auto txt = ""s;
+
+    try
+    {
+        auto handle = msgpack::unpack(
+            txt.data(), txt.size());
+    }
+    catch(std::exception& e)
+    {
+        cout << e.what() << endl;
+    }
+}
+
 int main()
 {
     case1();
     case2();
     case3();
+    case4();
 
     cout << msgpack_version() << endl;
     cout << "msgpack demo" << endl;
