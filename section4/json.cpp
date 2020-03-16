@@ -1,6 +1,9 @@
 // Copyright (c) 2020 by Chrono
 //
-// g++ test_json.cpp -std=c++14 -I../common -o a.out;./a.out
+// git clone git@github.com:nlohmann/json.git
+// wget https://github.com/nlohmann/json/releases/download/v3.7.3/json.hpp
+//
+// g++ json.cpp -std=c++14 -I../common -o a.out;./a.out
 
 #include <iostream>
 
@@ -13,19 +16,22 @@ using json_t = nlohmann::json;
 
 void case1()
 {
-    cout << json_t::meta().dump(2) << endl;
-
     json_t j;
     j["age"] = 23;
     j["name"] = "spiderman";
-    j["jobs"] = {"superhero", "neighborhood"};
     j["gear"]["suits"] = "2099";
+    j["jobs"] = {"superhero", "neighborhood"};
 
-    cout << j << endl;
-}
+    vector<int> v = {1,2,3};
+    j["numbers"] = v;
 
-void case2()
-{
+    map<string, int> m = {{"one",1}, {"two", 2}};
+    j["kv"] = m;
+
+    cout << j.dump() << endl;
+    cout << j.dump(2) << endl;
+
+#if 0
     json_t j = {
         {"age", 23},
         {"name", "spiderman"},
@@ -34,9 +40,10 @@ void case2()
     };
 
     cout << j.dump(2) << endl;
+#endif
 }
 
-void case3()
+void case2()
 {
     string str = R"({
         "name": "peter",
@@ -46,11 +53,31 @@ void case3()
 
     auto j = json_t::parse(str);
 
+    assert(j["age"] == 23);
+    assert(j["name"] == "peter");
+
     cout << j.dump(2) << endl;
+}
+
+void case3()
+{
+    auto txt = "bad:data"s;
+
+    try
+    {
+        auto j = json_t::parse(txt);
+    }
+    catch(std::exception& e)
+    {
+        cout << e.what() << endl;
+    }
 }
 
 int main()
 {
+    //cout << json_t::meta() << endl;
+    cout << json_t::meta().dump(2) << endl;
+
     case1();
     case2();
     case3();
