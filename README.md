@@ -43,6 +43,7 @@ Pull requests of make/cmake are welcome!
 * [msgpack-c](https://github.com/msgpack/msgpack-c)
 * [ProtoBuf](https://github.com/protocolbuffers/protobuf)
 * [protobuf-c](https://github.com/protobuf-c/protobuf-c)
+* [gRPC](https://grpc.io)
 * [Thrift](https://thrift.apache.org/)
 * [libcurl](https://curl.haxx.se/libcurl/)
 * [cpr](https://github.com/whoshuu/cpr)
