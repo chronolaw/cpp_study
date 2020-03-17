@@ -4,7 +4,6 @@
 //
 // /usr/include/msgpack
 //
-// g++ msgpack.cpp -std=c++11 -o a.out;./a.out
 // g++ msgpack.cpp -std=c++14 -o a.out;./a.out
 //
 // source include
