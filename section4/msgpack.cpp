@@ -8,7 +8,6 @@
 // g++ msgpack.cpp -std=c++14 -o a.out;./a.out
 //
 // source include
-// g++ msgpack.cpp -std=c++11 -I../common/include -o a.out;./a.out
 // g++ msgpack.cpp -std=c++14 -I../common/include -o a.out;./a.out
 
 #include <iostream>
@@ -18,7 +17,7 @@
 
 #include <msgpack.hpp>
 
-#if MSGPACK_VERSION_MAJOR < 3
+#if MSGPACK_VERSION_MAJOR < 2
 #   error "msgpack  is too old."
 #endif
 
