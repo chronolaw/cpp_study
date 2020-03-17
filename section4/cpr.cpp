@@ -7,6 +7,8 @@
 // g++ cpr.cpp -std=c++11 -lcpr -lpthread -lcurl -o a.out;./a.out
 // g++ cpr.cpp -std=c++14 -lcpr -lpthread -lcurl -o a.out;./a.out
 
+#include <cassert>
+
 #include <iostream>
 
 #include <cpr/cpr.h>
@@ -16,8 +18,7 @@ using namespace std;
 void case1()
 {
     auto res = cpr::Get(
-                cpr::Url{"http://nginx.org"},
-                cpr::Parameters{{"key", "value"}}
+                cpr::Url{"http://nginx.org"}
     );
 
     cout << res.elapsed << endl;
@@ -35,6 +36,29 @@ void case1()
 }
 
 void case2()
+{
+    auto res1 = cpr::Head(
+                cpr::Url{"http://nginx.org/"}
+    );
+    assert(res1.text.empty());
+
+#if 0
+    auto res2 = cpr::Get(
+                cpr::Url{"http://nginx.org"},
+                cpr::Parameters{
+                    {"a", 1}, {"b", 2}}
+    );
+#endif
+
+    auto res3 = cpr::Post(
+                cpr::Url{"http://nginx.org"},
+                cpr::Header{{"x", "xxx"}},
+                cpr::Body{"post data"},
+                cpr::Timeout{200ms}
+    );
+}
+
+void case3()
 {
     auto f = cpr::GetAsync(
                 cpr::Url{"http://openresty.org"}
@@ -54,6 +78,7 @@ int main()
 {
     case1();
     case2();
+    case3();
 
     cout << "libcpr demo" << endl;
 }
