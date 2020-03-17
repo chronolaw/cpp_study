@@ -22,6 +22,20 @@ size_t write_callback(char* ptr, size_t size, size_t nmemb, void* userdata);
 
 void case1()
 {
+    auto curl = curl_easy_init();
+
+    curl_easy_setopt(curl, CURLOPT_URL, "http://nginx.org");
+
+    auto res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        cout << curl_easy_strerror(res) << endl;
+    }
+
+    curl_easy_cleanup(curl);
+}
+
+void case2()
+{
     //using curl_t = CURL;
 
     auto curl = curl_easy_init();
@@ -60,6 +74,7 @@ int main()
     curl_global_init(CURL_GLOBAL_SSL);
 
     case1();
+    case2();
 
     cout << curl_version() << endl;
     cout << "libcurl demo" << endl;
