@@ -17,8 +17,11 @@ using namespace std;
 
 void case1()
 {
+    //const auto url = "http://nginx.org"s;
+    const auto url = "http://openresty.org"s;
+
     auto res = cpr::Get(
-                cpr::Url{"http://nginx.org"}
+                cpr::Url{url}
     );
 
     cout << res.elapsed << endl;
@@ -37,22 +40,23 @@ void case1()
 
 void case2()
 {
+    //const auto url = "http://www.163.com"s;
+    const auto url = "http://openresty.org"s;
+
     auto res1 = cpr::Head(
-                cpr::Url{"http://nginx.org/"}
+                cpr::Url{url}
     );
     assert(res1.text.empty());
 
-#if 0
     auto res2 = cpr::Get(
-                cpr::Url{"http://nginx.org"},
+                cpr::Url{url},
                 cpr::Parameters{
                     {"a", 1}, {"b", 2}}
     );
-#endif
 
     auto res3 = cpr::Post(
-                cpr::Url{"http://nginx.org"},
-                cpr::Header{{"x", "xxx"}},
+                cpr::Url{url},
+                cpr::Header{{"x", "xxx"},{"expect",""}},
                 cpr::Body{"post data"},
                 cpr::Timeout{200ms}
     );
