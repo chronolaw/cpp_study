@@ -11,6 +11,8 @@
 // g++ curl.cpp -std=c++11 -lcurl -o a.out;./a.out
 // g++ curl.cpp -std=c++14 -lcurl -o a.out;./a.out
 
+#include <cassert>
+
 #include <iostream>
 
 #include <curl/curl.h>
@@ -23,6 +25,7 @@ size_t write_callback(char* ptr, size_t size, size_t nmemb, void* userdata);
 void case1()
 {
     auto curl = curl_easy_init();
+    assert(curl);
 
     curl_easy_setopt(curl, CURLOPT_URL, "http://nginx.org");
 
@@ -73,7 +76,7 @@ int main()
 {
     curl_global_init(CURL_GLOBAL_SSL);
 
-    case1();
+    //case1();
     case2();
 
     cout << curl_version() << endl;
