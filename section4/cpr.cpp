@@ -20,16 +20,18 @@ void case1()
                 cpr::Parameters{{"key", "value"}}
     );
 
+    cout << res.elapsed << endl;
+
     cout << res.url << endl;
     cout << res.status_code << endl;
-    cout << res.elapsed << endl;
-    cout << res.header["server"] << endl;
+    //cout << res.header["server"] << endl;
     cout << res.text.length() << endl;
 
     for(auto& x : res.header) {
         cout << x.first << "=>"
              << x.second << endl;
     }
+    cout << endl;
 }
 
 void case2()
