@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-//#include "std.hpp"
+#include <luajit-2.1/luajit.h>
 
 int main()
 {
