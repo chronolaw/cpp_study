@@ -7,9 +7,21 @@
 // mkdir build && cd build
 // cmake .. -DPYBIND11_TEST=OFF
 //
-// g++ -shared -std=c++11 -fPIC `python3 -m pybind11 --includes` pybind.cpp -o pydemo`python3-config --extension-suffix`
+// g++ pybind.cpp -std=c++11 -shared -fPIC `python3 -m pybind11 --includes` -o pydemo`python3-config --extension-suffix`
+// g++ pybind.cpp -std=c++14 -shared -fPIC `python3 -m pybind11 --includes` -o pydemo`python3-config --extension-suffix`
+
+#include <iostream>
 
 #include <pybind11/pybind11.h>
+
+using namespace std;
+
+void info()
+{
+    cout << "c++ version = " << __cplusplus << endl;
+    cout << "gcc version = " << __VERSION__ << endl;
+    cout << "libstdc++   = " << __GLIBCXX__ << endl;
+}
 
 int add(int a, int b)
 {
@@ -18,18 +30,16 @@ int add(int a, int b)
 
 PYBIND11_MODULE(pydemo, m)
 {
-    m.doc() = "pybind11 doc";
+    m.doc() = "pybind11 demodoc";
+
+    m.def("info", &info, "cpp info");
     m.def("add", &add, "add func");
 }
 
 #if 0
 
-#include <iostream>
-
 int main()
 {
-    using namespace std;
-
     cout << "pybind demo" << endl;
 }
 #endif
