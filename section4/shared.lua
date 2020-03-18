@@ -13,7 +13,12 @@ ffi_cdef[[
 int my_add(int a, int b);
 ]]
 
-local shared = ffi_load("./lua_shared.so")
+print(jit.version)
+print(jit.os)
+print(jit.arch)
+print(jit.status())
+
+local shared = ffi_load("./liblua_shared.so")
 
 local x = shared.my_add(1, 2)
 print(x)
