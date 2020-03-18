@@ -26,6 +26,7 @@ auto make_sock = [&](auto mode)
 void case1()
 {
     const auto addr = "ipc:///dev/shm/zmq.sock"s;
+    //const auto addr = "inproc:///dev/shm/zmq.sock"s;
 
     auto receiver = [=]()
     {
