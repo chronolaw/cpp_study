@@ -13,8 +13,11 @@
 #include <iostream>
 
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 using namespace std;
+
+namespace py = pybind11;
 
 class Point final
 {
@@ -57,9 +60,33 @@ PYBIND11_MODULE(pydemo, m)
         }
     );
 
+    m.def("use_str",
+        [](const string& str)
+        {
+            cout << str << endl;
+            return str + "!!";
+        }
+    );
+
+    m.def("use_list",
+        [](const vector<int>& v)
+        {
+            auto vv = v;
+
+            for(auto& x : vv) {
+                cout << x << ",";
+            }
+            cout << endl;
+
+            vv.push_back(100);
+
+            return vv;
+        }
+    );
+
     pybind11::class_<Point>(m, "Point")
-        .def(pybind11::init())
-        .def(pybind11::init<int>())
+        .def(py::init())
+        .def(py::init<int>())
         .def("get", &Point::get)
         .def("set", &Point::set)
         ;
