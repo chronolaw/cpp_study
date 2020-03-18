@@ -10,6 +10,8 @@ print(x)
 s = pydemo.use_str("hello c++")
 print(s)
 
-v = [1,2,3]
-vv = pydemo.use_list(v)
-print(vv)
+t = pydemo.use_tuple((1,2, "matrix"))
+print(t)
+
+v = pydemo.use_list([1,2,3])
+print(v)

@@ -68,6 +68,17 @@ PYBIND11_MODULE(pydemo, m)
         }
     );
 
+    m.def("use_tuple",
+        [](tuple<int, int, string> x)
+        {
+            get<0>(x)++;
+            get<1>(x)++;
+            get<2>(x)+= "??";
+
+            return x;
+        }
+    );
+
     m.def("use_list",
         [](const vector<int>& v)
         {
