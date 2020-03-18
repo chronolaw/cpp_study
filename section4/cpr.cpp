@@ -4,7 +4,6 @@
 // cmake . -DUSE_SYSTEM_CURL=ON -DBUILD_CPR_TESTS=OFF
 // make && make install
 //
-// g++ cpr.cpp -std=c++11 -lcpr -lpthread -lcurl -o a.out;./a.out
 // g++ cpr.cpp -std=c++14 -lcpr -lpthread -lcurl -o a.out;./a.out
 
 #include <cassert>
@@ -51,7 +50,7 @@ void case2()
     auto res2 = cpr::Get(
                 cpr::Url{url},
                 cpr::Parameters{
-                    {"a", 1}, {"b", 2}}
+                    {"a", "1"}, {"b", "2"}}
     );
 
     auto res3 = cpr::Post(
