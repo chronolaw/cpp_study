@@ -16,6 +16,28 @@
 
 using namespace std;
 
+PYBIND11_MODULE(pydemo, m)
+{
+    m.doc() = "pybind11 demo doc";
+
+    m.def("info",
+        []()
+        {
+            cout << "c++ version = " << __cplusplus << endl;
+            cout << "gcc version = " << __VERSION__ << endl;
+            cout << "libstdc++   = " << __GLIBCXX__ << endl;
+        }
+    );
+
+    m.def("add",
+        [](int a, int b)
+        {
+            return a + b;
+        }
+    );
+}
+
+#if 0
 void info()
 {
     cout << "c++ version = " << __cplusplus << endl;
@@ -35,6 +57,7 @@ PYBIND11_MODULE(pydemo, m)
     m.def("info", &info, "cpp info");
     m.def("add", &add, "add func");
 }
+#endif
 
 #if 0
 
