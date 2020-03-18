@@ -47,9 +47,12 @@ PYBIND11_MODULE(pydemo, m)
     m.def("info",
         []()
         {
-            cout << "c++ version = " << __cplusplus << endl;
-            cout << "gcc version = " << __VERSION__ << endl;
-            cout << "libstdc++   = " << __GLIBCXX__ << endl;
+            //cout << "c++ version = " << __cplusplus << endl;
+            //cout << "gcc version = " << __VERSION__ << endl;
+            //cout << "libstdc++   = " << __GLIBCXX__ << endl;
+            py::print("c++ version =", __cplusplus);
+            py::print("gcc version =", __VERSION__);
+            py::print("libstdc++   =", __GLIBCXX__);
         }
     );
 
@@ -63,7 +66,8 @@ PYBIND11_MODULE(pydemo, m)
     m.def("use_str",
         [](const string& str)
         {
-            cout << str << endl;
+            //cout << str << endl;
+            py::print(str);
             return str + "!!";
         }
     );
@@ -84,10 +88,11 @@ PYBIND11_MODULE(pydemo, m)
         {
             auto vv = v;
 
-            for(auto& x : vv) {
-                cout << x << ",";
-            }
-            cout << endl;
+            //for(auto& x : vv) {
+            //    //cout << x << ",";
+            //}
+            //cout << endl;
+            py::print("input :", vv);
 
             vv.push_back(100);
 
