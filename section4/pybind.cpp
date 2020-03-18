@@ -16,6 +16,27 @@
 
 using namespace std;
 
+class Point final
+{
+private:
+    int x = 0;
+public:
+    Point() = default;
+   ~Point() = default;
+
+    Point(int a) : x(a) {}
+public:
+    int get() const
+    {
+        return x;
+    }
+
+    void set(int a)
+    {
+        x = a;
+    }
+};
+
 PYBIND11_MODULE(pydemo, m)
 {
     m.doc() = "pybind11 demo doc";
@@ -35,6 +56,13 @@ PYBIND11_MODULE(pydemo, m)
             return a + b;
         }
     );
+
+    pybind11::class_<Point>(m, "Point")
+        .def(pybind11::init())
+        .def(pybind11::init<int>())
+        .def("get", &Point::get)
+        .def("set", &Point::set)
+        ;
 }
 
 #if 0
