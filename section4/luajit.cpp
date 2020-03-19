@@ -46,6 +46,11 @@ public:
     {
         return L;
     }
+
+    int dofile(const char* filename) const
+    {
+        return luaL_dofile(L, filename);
+    }
 public:
     MyLuaState(const MyLuaState&) = delete;
     MyLuaState& operator=(const MyLuaState&) = delete;
@@ -62,6 +67,9 @@ void case1()
 
     cout << path << endl;
     cout << cpath << endl;
+
+    auto status = luaL_dofile(L, "./embedded.lua");
+    //L.dofile("./embedded.lua");
 }
 
 int main()
