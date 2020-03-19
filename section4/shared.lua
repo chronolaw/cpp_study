@@ -1,5 +1,7 @@
 #!/usr/local/bin/luajit
 
+-- copyright (c) 2020 chrono
+
 local ffi = require "ffi"
 
 local ffi_load = ffi.load

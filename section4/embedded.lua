@@ -1,3 +1,5 @@
+#!/usr/local/bin/luajit
+
 -- copyright (c) 2020 chrono
 
 print('hello c++')
