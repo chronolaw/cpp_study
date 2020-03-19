@@ -50,6 +50,7 @@ Pull requests of make/cmake are welcome!
 * [pybind11](https://github.com/pybind/pybind11)
 * [luajit](http://luajit.org/)
 * [luajit-openresty](https://github.com/openresty/luajit2)
+* [LuaBridge](https://github.com/vinniefalco/LuaBridge)
 * [gperftools](https://github.com/gperftools/gperftools)
 
 
