@@ -7,6 +7,7 @@
 
 extern "C" {
 
+int num = 10;
 int my_add(int a, int b);
 
 }
