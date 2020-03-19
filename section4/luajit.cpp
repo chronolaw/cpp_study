@@ -67,14 +67,24 @@ void case1()
 
     cout << path << endl;
     cout << cpath << endl;
+}
 
-    auto status = luaL_dofile(L, "./embedded.lua");
+void case2()
+{
+    MyLuaState L;
+
+    int status;
+
+    status = luaL_dostring(L, R"(print('hello\n');)");
+    status = luaL_dofile(L, "./embedded.lua");
+
     //L.dofile("./embedded.lua");
 }
 
 int main()
 {
     case1();
+    case2();
 
     cout << "luajit demo" << endl;
 }
