@@ -22,19 +22,22 @@ using namespace luabridge;
 
 using namespace std;
 
-class LuaState final
+class MyLuaState final
 {
 public:
     using lua_state_t = decltype(luaL_newstate());
 private:
     lua_state_t L = nullptr;
 public:
-    LuaState()
+    MyLuaState()
     {
         L = luaL_newstate();
+        assert(L);
+
+        luaL_openlibs(L);
     }
 
-   ~LuaState()
+   ~MyLuaState()
     {
         lua_close(L);
     }
@@ -43,22 +46,22 @@ public:
     {
         return L;
     }
+public:
+    MyLuaState(const MyLuaState&) = delete;
+    MyLuaState& operator=(const MyLuaState&) = delete;
 };
 
 void case1()
 {
-    auto L = luaL_newstate();
-    assert(L);
-
-    luaL_openlibs(L);
+    MyLuaState L;
 
     auto package = getGlobal(L, "package");
 
     auto path = package["path"];
+    auto cpath = package["cpath"];
 
     cout << path << endl;
-
-    lua_close(L);
+    cout << cpath << endl;
 }
 
 int main()
