@@ -52,16 +52,24 @@ void case2()
 
     //curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
 
-#if 1
+#if 0
     decltype(&write_callback) f =
         [](char *ptr, size_t size, size_t nmemb, void *userdata)
         {
             cout << "size = " << size * nmemb << endl;
             return size * nmemb;
         };
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, f);
 #endif
 
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, f);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+        (decltype(&write_callback))
+        [](char *ptr, size_t size, size_t nmemb, void *userdata)
+        {
+            cout << "size = " << size * nmemb << endl;
+            return size * nmemb;
+        }
+    );
 
     auto res = curl_easy_perform(curl);
 
