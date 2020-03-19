@@ -100,7 +100,7 @@ PYBIND11_MODULE(pydemo, m)
         }
     );
 
-    pybind11::class_<Point>(m, "Point")
+    py::class_<Point>(m, "Point")
         .def(py::init())
         .def(py::init<int>())
         .def("get", &Point::get)
