@@ -62,8 +62,8 @@ void case1()
 
     auto package = getGlobal(L, "package");
 
-    auto path = package["path"];
-    auto cpath = package["cpath"];
+    string path = package["path"];
+    string cpath = package["cpath"];
 
     cout << path << endl;
     cout << cpath << endl;
