@@ -1,5 +1,10 @@
 // Copyright (c) 2020 by Chrono
 //
+// git clone git@github.com:openresty/luajit2.git
+// make && make install
+//
+// git clone git@github.com:vinniefalco/LuaBridge.git
+//
 // g++ luajit.cpp -std=c++11 -I../common -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -o a.out;./a.out
 // g++ luajit.cpp -std=c++11 -I../common -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -O0 -g -o a.out
 //
@@ -75,8 +80,36 @@ void case2()
 
     int status;
 
-    status = luaL_dostring(L, R"(print('hello\n');)");
+    status = luaL_dostring(L, "print('hello lua')");
     status = luaL_dofile(L, "./embedded.lua");
+
+    //L.dofile("./embedded.lua");
+}
+
+void case3()
+{
+    MyLuaState L;
+
+    int status;
+    string chunk = R"(
+        function say(s)
+            print(s)
+        end
+        function add(a, b)
+            return a + b
+        end
+    )";
+
+    status = luaL_dostring(L, chunk.c_str());
+    assert(status == 0);
+
+    auto f1 = getGlobal(L, "say");
+    f1("say something");
+
+    auto f2 = getGlobal(L, "add");
+    auto v = f2(10, 20);
+    assert(v == 30);
+    //cout << v << endl;
 
     //L.dofile("./embedded.lua");
 }
@@ -85,6 +118,7 @@ int main()
 {
     case1();
     case2();
+    case3();
 
     cout << "luajit demo" << endl;
 }
