@@ -1,5 +1,13 @@
 // Copyright (c) 2020 by Chrono
 //
+// sudo cp src/pprof /usr/bin
+//
+// pprof --text ./a.out case1.perf > case1.txt
+// pprof --pdf ./a.out case1.perf >case1.pdf
+// pprof --svg ./a.out case1.perf >case1.svg
+// pprof --collapsed ./a.out case1.perf > case1.cbt
+// ./flamegraph.pl case1.cbt > fg.svg
+//
 // g++ gperf.cpp -std=c++14 -lprofiler -ltcmalloc -g -O0 -o a.out;./a.out
 
 #include <cassert>
