@@ -48,6 +48,7 @@ Pull requests of make/cmake are welcome!
 * [cpr](https://github.com/whoshuu/cpr)
 * [ZMQ](https://zeromq.org/)
 * [pybind11](https://github.com/pybind/pybind11)
+* [lua](https://www.lua.org/)
 * [luajit](http://luajit.org/)
 * [luajit-openresty](https://github.com/openresty/luajit2)
 * [LuaBridge](https://github.com/vinniefalco/LuaBridge)
