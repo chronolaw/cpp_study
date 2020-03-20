@@ -6,7 +6,9 @@
 // pprof --pdf ./a.out case1.perf >case1.pdf
 // pprof --svg ./a.out case1.perf >case1.svg
 // pprof --collapsed ./a.out case1.perf > case1.cbt
-// ./flamegraph.pl case1.cbt > fg.svg
+//
+// ./flamegraph.pl case1.cbt > flame.svg
+// ./flamegraph.pl --invert --color aqua case1.cbt > icicle.svg
 //
 // g++ gperf.cpp -std=c++14 -lprofiler -ltcmalloc -g -O0 -o a.out;./a.out
 
@@ -54,14 +56,14 @@ void case1()
 
     auto str = "neir:automata"s;
 
-#if 1
+#if 0
     auto reg  = make_regex(R"(^(\w+)\:(\w+)$)");
     auto what = make_match();
 #endif
 
     for(int i = 0; i < 1000; i++) {
 
-#if 0
+#if 1
         auto reg  = make_regex(R"(^(\w+)\:(\w+)$)");
         auto what = make_match();
 #endif
