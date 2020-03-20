@@ -53,6 +53,7 @@ Pull requests of make/cmake are welcome!
 * [luajit-openresty](https://github.com/openresty/luajit2)
 * [LuaBridge](https://github.com/vinniefalco/LuaBridge)
 * [gperftools](https://github.com/gperftools/gperftools)
+* [FlameGraph](https://github.com/brendangregg/FlameGraph)
 
 
 * [Awesome C++](https://github.com/fffaraz/awesome-cpp)
