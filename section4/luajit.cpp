@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <memory>
 
 extern "C" {
 #include <luajit.h>
@@ -27,6 +28,7 @@ using namespace luabridge;
 
 using namespace std;
 
+#if 0
 class MyLuaState final
 {
 public:
@@ -60,10 +62,27 @@ public:
     MyLuaState(const MyLuaState&) = delete;
     MyLuaState& operator=(const MyLuaState&) = delete;
 };
+#endif
+
+//using MyLuaState = std::shared_ptr<lua_State>;
+auto make_luavm = []()
+{
+    std::shared_ptr<lua_State> vm(
+        luaL_newstate(), lua_close
+        );
+    assert(vm);
+
+    luaL_openlibs(vm.get());
+
+    return vm;
+};
+
+#define L vm.get()
 
 void case1()
 {
-    MyLuaState L;
+    //MyLuaState L;
+    auto vm = make_luavm();
 
     auto package = getGlobal(L, "package");
 
@@ -76,7 +95,8 @@ void case1()
 
 void case2()
 {
-    MyLuaState L;
+    //MyLuaState L;
+    auto vm = make_luavm();
 
     int status;
 
@@ -88,7 +108,8 @@ void case2()
 
 void case3()
 {
-    MyLuaState L;
+    //MyLuaState L;
+    auto vm = make_luavm();
 
     int status;
     string chunk = R"(
