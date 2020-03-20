@@ -42,14 +42,21 @@ auto make_match = []()
 
 void case1()
 {
-    auto p = make_cpu_profiler("case1.perf");
+    auto cp = make_cpu_profiler("case1.perf");
 
     auto str = "neir:automata"s;
 
+#if 1
+    auto reg  = make_regex(R"(^(\w+)\:(\w+)$)");
+    auto what = make_match();
+#endif
+
     for(int i = 0; i < 1000; i++) {
 
+#if 0
         auto reg  = make_regex(R"(^(\w+)\:(\w+)$)");
         auto what = make_match();
+#endif
 
         assert(regex_match(str, what, reg));
     }
