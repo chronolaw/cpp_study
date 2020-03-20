@@ -3,7 +3,7 @@
 // g++ lua_shared.cpp -std=c++11 -shared -fPIC -o liblua_shared.so
 // g++ lua_shared.cpp -std=c++14 -shared -fPIC -o liblua_shared.so
 
-#include <luajit-2.1/luajit.h>
+//#include <luajit-2.1/luajit.h>
 
 extern "C" {
 
