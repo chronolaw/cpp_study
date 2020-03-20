@@ -102,6 +102,7 @@ void case2()
 
     status = luaL_dostring(L, "print('hello lua')");
     status = luaL_dofile(L, "./embedded.lua");
+    status = luaL_dofile(L, "./shared.lua");
 
     //L.dofile("./embedded.lua");
 }
