@@ -54,6 +54,7 @@ Pull requests of make/cmake are welcome!
 * [LuaBridge](https://github.com/vinniefalco/LuaBridge)
 * [gperftools](https://github.com/gperftools/gperftools)
 * [FlameGraph](https://github.com/brendangregg/FlameGraph)
+* [OpenResty XRay](https://openresty.com.cn/cn/xray/)
 
 
 * [Awesome C++](https://github.com/fffaraz/awesome-cpp)
