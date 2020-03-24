@@ -1,0 +1,1398 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="998" onload="init(evt)" viewBox="0 0 1200 998" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs >
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#f8f8f8" offset="5%" />
+		<stop stop-color="#e8e8e8" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	.func_g:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	var details, searchbtn, matchedtxt, svg;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+	}
+
+	// mouse-over for info
+	function s(node) {		// show
+		info = g_to_text(node);
+		details.nodeValue = "Function: " + info;
+	}
+	function c() {			// clear
+		details.nodeValue = ' ';
+	}
+
+	// ctrl-F for search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+	})
+
+	// functions
+	function find_child(parent, name, attr) {
+		var children = parent.childNodes;
+		for (var i=0; i<children.length;i++) {
+			if (children[i].tagName == name)
+				return (attr != undefined) ? children[i].attributes[attr].value : children[i];
+		}
+		return;
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_"+attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_"+attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_"+attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes["width"].value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes["x"].value = parseFloat(r.attributes["x"].value) +3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2*12*0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		// Fit in full text width
+		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+			return;
+
+		for (var x=txt.length-2; x>0; x--) {
+			if (t.getSubStringLength(0, x+2) <= w) {
+				t.textContent = txt.substring(0,x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for(var i=0, c=e.childNodes; i<c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes["x"] != undefined) {
+				orig_save(e, "x");
+				e.attributes["x"].value = (parseFloat(e.attributes["x"].value) - x - 10) * ratio + 10;
+				if(e.tagName == "text") e.attributes["x"].value = find_child(e.parentNode, "rect", "x") + 3;
+			}
+			if (e.attributes["width"] != undefined) {
+				orig_save(e, "width");
+				e.attributes["width"].value = parseFloat(e.attributes["width"].value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for(var i=0, c=e.childNodes; i<c.length; i++) {
+			zoom_child(c[i], x-10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes["x"] != undefined) {
+				orig_save(e, "x");
+				e.attributes["x"].value = 10;
+			}
+			if (e.attributes["width"] != undefined) {
+				orig_save(e, "width");
+				e.attributes["width"].value = parseInt(svg.width.baseVal.value) - (10*2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for(var i=0, c=e.childNodes; i<c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr["width"].value);
+		var xmin = parseFloat(attr["x"].value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr["y"].value);
+		var ratio = (svg.width.baseVal.value - 2*10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		var unzoombtn = document.getElementById("unzoom");
+		unzoombtn.style["opacity"] = "1.0";
+
+		var el = document.getElementsByTagName("g");
+		for(var i=0;i<el.length;i++){
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a["x"].value);
+			var ew = parseFloat(a["width"].value);
+			// Is it an ancestor
+			if (1 == 0) {
+				var upstack = parseFloat(a["y"].value) > ymin;
+			} else {
+				var upstack = parseFloat(a["y"].value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.style["opacity"] = "0.5";
+					zoom_parent(e);
+					e.onclick = function(e){unzoom(); zoom(this);};
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.style["display"] = "none";
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.style["display"] = "none";
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					e.onclick = function(e){zoom(this);};
+					update_text(e);
+				}
+			}
+		}
+	}
+	function unzoom() {
+		var unzoombtn = document.getElementById("unzoom");
+		unzoombtn.style["opacity"] = "0.0";
+
+		var el = document.getElementsByTagName("g");
+		for(i=0;i<el.length;i++) {
+			el[i].style["display"] = "block";
+			el[i].style["opacity"] = "1";
+			zoom_reset(el[i]);
+			update_text(el[i]);
+		}
+	}
+
+	// search
+	function reset_search() {
+		var el = document.getElementsByTagName("rect");
+		for (var i=0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)", "");
+			if (term != null) {
+				search(term)
+			}
+		} else {
+			reset_search();
+			searching = 0;
+			searchbtn.style["opacity"] = "0.1";
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.style["opacity"] = "0.0";
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		var re = new RegExp(term);
+		var el = document.getElementsByTagName("g");
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			if (e.attributes["class"].value != "func_g")
+				continue;
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (rect == null) {
+				// the rect might be wrapped in an anchor
+				// if nameattr href is being used
+				if (rect = find_child(e, "a")) {
+				    rect = find_child(r, "rect");
+				}
+			}
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes["width"].value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes["x"].value);
+				orig_save(rect, "fill");
+				rect.attributes["fill"].value =
+				    "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+
+		searchbtn.style["opacity"] = "1.0";
+		searchbtn.firstChild.nodeValue = "Reset Search"
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.style["opacity"] = "1.0";
+		pct = 100 * count / maxwidth;
+		if (pct == 100)
+			pct = "100"
+		else
+			pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+	function searchover(e) {
+		searchbtn.style["opacity"] = "1.0";
+	}
+	function searchout(e) {
+		if (searching) {
+			searchbtn.style["opacity"] = "1.0";
+		} else {
+			searchbtn.style["opacity"] = "0.1";
+		}
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="998.0" fill="url(#background)"  />
+<text text-anchor="middle" x="600.00" y="24" font-size="17" font-family="Verdana" fill="rgb(0,0,0)"  >Icicle Graph</text>
+<text text-anchor="" x="10.00" y="981" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="details" > </text>
+<text text-anchor="" x="10.00" y="24" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="unzoom" onclick="unzoom()" style="opacity:0.0;cursor:pointer" >Reset Zoom</text>
+<text text-anchor="" x="1090.00" y="24" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="search" onmouseover="searchover()" onmouseout="searchout()" onclick="search_prompt()" style="opacity:0.1;cursor:pointer" >Search</text>
+<text text-anchor="" x="1090.00" y="981" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="matched" > </text>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void __gnu_cxx::new_allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;::construct&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="583.6" y="436" width="16.4" height="15.0" fill="rgb(71,185,185)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::_Destroy&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*) (1 samples, 1.39%)</title><rect x="1108.1" y="500" width="16.3" height="15.0" fill="rgb(90,201,201)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Vector_base&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt;::_M_deallocate(std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;*, unsigned long) (1 samples, 1.39%)</title><rect x="1108.1" y="644" width="16.3" height="15.0" fill="rgb(97,208,208)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="654.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::__copy_move_a&lt;false, char*, char*&gt;(char*, char*, char*) (1 samples, 1.39%)</title><rect x="452.5" y="612" width="16.4" height="15.0" fill="rgb(106,216,216)" rx="2" ry="2" />
+<text text-anchor="" x="455.50" y="622.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::__uninitialized_copy&lt;true&gt;::__uninit_copy&lt;char*, char*&gt;(char*, char*, char*) (3 samples, 4.17%)</title><rect x="419.7" y="564" width="49.2" height="15.0" fill="rgb(72,186,186)" rx="2" ry="2" />
+<text text-anchor="" x="422.72" y="574.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >char..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::vector&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::_M_emplace_back_aux&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (2 samples, 2.78%)</title><rect x="1140.8" y="292" width="32.8" height="15.0" fill="rgb(77,189,189)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="302.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >vo..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; std::find&lt;__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&amp;) (1 samples, 1.39%)</title><rect x="632.8" y="436" width="16.4" height="15.0" fill="rgb(59,173,173)" rx="2" ry="2" />
+<text text-anchor="" x="635.78" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="644" width="16.4" height="15.0" fill="rgb(89,201,201)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="654.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::bitset&lt;256ul&gt;::reference::reference(std::bitset&lt;256ul&gt;&amp;, unsigned long) (1 samples, 1.39%)</title><rect x="1075.3" y="436" width="16.4" height="15.0" fill="rgb(53,168,168)" rx="2" ry="2" />
+<text text-anchor="" x="1078.28" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_match() (1 samples, 1.39%)</title><rect x="1173.6" y="180" width="16.4" height="15.0" fill="rgb(105,216,216)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="190.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_regex&lt;char, std::__cxx11::regex_traits&lt;char&gt; &gt;::basic_regex(char const*, std::regex_constants::syntax_option_type) (71 samples, 98.61%)</title><rect x="10.0" y="148" width="1163.6" height="15.0" fill="rgb(86,198,198)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="158.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__cxx11::basic_regex&lt;char, std::__cxx11::regex_traits&lt;char&gt; &gt;::basic_regex(char const*, std::regex_constants::syntax_option_type)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::~_State() (1 samples, 1.39%)</title><rect x="1108.1" y="516" width="16.3" height="15.0" fill="rgb(78,191,191)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::uninitialized_copy&lt;char*, char*&gt;(char*, char*, char*) (3 samples, 4.17%)</title><rect x="419.7" y="548" width="49.2" height="15.0" fill="rgb(61,175,175)" rx="2" ry="2" />
+<text text-anchor="" x="422.72" y="558.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >char..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt;::_M_make_cache(std::integral_constant&lt;bool, true&gt;) (30 samples, 41.67%)</title><rect x="616.4" y="404" width="491.7" height="15.0" fill="rgb(63,177,177)" rx="2" ry="2" />
+<text text-anchor="" x="619.39" y="414.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, fa..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::iterator_traits&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; &gt;::difference_type std::distance&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;) (1 samples, 1.39%)</title><rect x="141.1" y="500" width="16.4" height="15.0" fill="rgb(51,166,166)" rx="2" ry="2" />
+<text text-anchor="" x="144.11" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>bool __gnu_cxx::operator!=&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; const&amp;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; const&amp;) (1 samples, 1.39%)</title><rect x="157.5" y="484" width="16.4" height="15.0" fill="rgb(73,186,186)" rx="2" ry="2" />
+<text text-anchor="" x="160.50" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::collate&lt;char&gt; const&amp; std::use_facet&lt;std::__cxx11::collate&lt;char&gt; &gt;(std::locale const&amp;) (2 samples, 2.78%)</title><rect x="272.2" y="500" width="32.8" height="15.0" fill="rgb(78,191,191)" rx="2" ry="2" />
+<text text-anchor="" x="275.22" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_rep_once_more(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="820" width="16.4" height="15.0" fill="rgb(91,202,202)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="830.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_term() (31 samples, 43.06%)</title><rect x="616.4" y="340" width="508.0" height="15.0" fill="rgb(81,194,194)" rx="2" ry="2" />
+<text text-anchor="" x="619.39" y="350.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_term()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="292" width="16.4" height="15.0" fill="rgb(60,174,174)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="302.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_rep_once_more(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="676" width="16.4" height="15.0" fill="rgb(50,165,165)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="686.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::iterator_traits&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; &gt;::difference_type std::__distance&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, std::random_access_iterator_tag) (1 samples, 1.39%)</title><rect x="141.1" y="516" width="16.4" height="15.0" fill="rgb(65,179,179)" rx="2" ry="2" />
+<text text-anchor="" x="144.11" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_rep_once_more(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="404" width="16.4" height="15.0" fill="rgb(65,179,179)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="414.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="564" width="16.4" height="15.0" fill="rgb(107,217,217)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="574.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative() (32 samples, 44.44%)</title><rect x="600.0" y="324" width="524.4" height="15.0" fill="rgb(86,198,198)" rx="2" ry="2" />
+<text text-anchor="" x="603.00" y="334.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternat..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::bitset&lt;256ul&gt;::reference::operator=(bool) (1 samples, 1.39%)</title><rect x="1091.7" y="420" width="16.4" height="15.0" fill="rgb(106,216,216)" rx="2" ry="2" />
+<text text-anchor="" x="1094.67" y="430.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_main_dispatch(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, std::integral_constant&lt;bool, true&gt;) (1 samples, 1.39%)</title><rect x="1173.6" y="212" width="16.4" height="15.0" fill="rgb(50,165,165)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="222.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_atom() (30 samples, 41.67%)</title><rect x="616.4" y="356" width="491.7" height="15.0" fill="rgb(77,190,190)" rx="2" ry="2" />
+<text text-anchor="" x="619.39" y="366.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_ato..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct_aux&lt;char*&gt;(char*, char*, std::__false_type) (1 samples, 1.39%)</title><rect x="747.5" y="500" width="16.4" height="15.0" fill="rgb(93,205,205)" rx="2" ry="2" />
+<text text-anchor="" x="750.50" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="340" width="16.4" height="15.0" fill="rgb(54,169,169)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="350.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_init&lt;0000000000402e88&gt; (1 samples, 1.39%)</title><rect x="206.7" y="564" width="16.4" height="15.0" fill="rgb(86,198,198)" rx="2" ry="2" />
+<text text-anchor="" x="209.67" y="574.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_NFA&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_insert_state(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;) (1 samples, 1.39%)</title><rect x="583.6" y="356" width="16.4" height="15.0" fill="rgb(99,210,210)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="366.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::copy&lt;char*, char*&gt;(char*, char*, char*) (2 samples, 2.78%)</title><rect x="895.0" y="548" width="32.8" height="15.0" fill="rgb(70,183,183)" rx="2" ry="2" />
+<text text-anchor="" x="898.00" y="558.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >ch..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::ctype&lt;char&gt; const&amp; std::use_facet&lt;std::ctype&lt;char&gt; &gt;(std::locale const&amp;) (2 samples, 2.78%)</title><rect x="501.7" y="484" width="32.7" height="15.0" fill="rgb(96,208,208)" rx="2" ry="2" />
+<text text-anchor="" x="504.67" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::__copy_move_a&lt;false, char*, char*&gt;(char*, char*, char*) (2 samples, 2.78%)</title><rect x="895.0" y="580" width="32.8" height="15.0" fill="rgb(81,193,193)" rx="2" ry="2" />
+<text text-anchor="" x="898.00" y="590.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >ch..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="516" width="16.4" height="15.0" fill="rgb(100,211,211)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>bool std::regex_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, char, std::__cxx11::regex_traits&lt;char&gt; &gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__cxx11::match_results&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; &gt;&amp;, std::__cxx11::basic_regex&lt;char, std::__cxx11::regex_traits&lt;char&gt; &gt; const&amp;, std::regex_constants::match_flag_type) (1 samples, 1.39%)</title><rect x="1173.6" y="148" width="16.4" height="15.0" fill="rgb(85,197,197)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="158.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::vector&lt;char, std::allocator&lt;char&gt; &gt;::_M_range_initialize&lt;char*&gt;(char*, char*, std::forward_iterator_tag) (6 samples, 8.33%)</title><rect x="403.3" y="516" width="98.4" height="15.0" fill="rgb(83,195,195)" rx="2" ry="2" />
+<text text-anchor="" x="406.33" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >void std::v..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Vector_base&lt;char, std::allocator&lt;char&gt; &gt;::_Vector_impl::~_Vector_impl() (1 samples, 1.39%)</title><rect x="1009.7" y="484" width="16.4" height="15.0" fill="rgb(72,185,185)" rx="2" ry="2" />
+<text text-anchor="" x="1012.72" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__memmove_avx_unaligned&lt;000000000014d9b0&gt; (1 samples, 1.39%)</title><rect x="911.4" y="612" width="16.4" height="15.0" fill="rgb(95,206,206)" rx="2" ry="2" />
+<text text-anchor="" x="914.39" y="622.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>main&lt;0000000000403977&gt; (72 samples, 100.00%)</title><rect x="10.0" y="100" width="1180.0" height="15.0" fill="rgb(61,175,175)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="110.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >main&lt;0000000000403977&gt;</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;::difference_type __gnu_cxx::operator-&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; const&amp;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; const&amp;) (2 samples, 2.78%)</title><rect x="665.6" y="500" width="32.7" height="15.0" fill="rgb(84,196,196)" rx="2" ry="2" />
+<text text-anchor="" x="668.56" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative() (69 samples, 95.83%)</title><rect x="10.0" y="260" width="1130.8" height="15.0" fill="rgb(104,215,215)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="270.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; std::__find_if&lt;__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__ops::_Iter_equals_val&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&gt; &gt;(__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__ops::_Iter_equals_val&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&gt;) (1 samples, 1.39%)</title><rect x="632.8" y="452" width="16.4" height="15.0" fill="rgb(77,190,190)" rx="2" ry="2" />
+<text text-anchor="" x="635.78" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Function_base::_Base_manager&lt;std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt; &gt;::_M_clone(std::_Any_data&amp;, std::_Any_data const&amp;, std::integral_constant&lt;bool, false&gt;) (1 samples, 1.39%)</title><rect x="1140.8" y="436" width="16.4" height="15.0" fill="rgb(62,176,176)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Vector_base&lt;char, std::allocator&lt;char&gt; &gt;::_M_allocate(unsigned long) (2 samples, 2.78%)</title><rect x="468.9" y="532" width="32.8" height="15.0" fill="rgb(50,165,165)" rx="2" ry="2" />
+<text text-anchor="" x="471.89" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::push_back(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="583.6" y="372" width="16.4" height="15.0" fill="rgb(67,181,181)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="382.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::__uninitialized_copy&lt;true&gt;::__uninit_copy&lt;char*, char*&gt;(char*, char*, char*) (2 samples, 2.78%)</title><rect x="895.0" y="532" width="32.8" height="15.0" fill="rgb(102,212,212)" rx="2" ry="2" />
+<text text-anchor="" x="898.00" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >ch..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Function_base::_Base_manager&lt;std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt; &gt;::_M_destroy(std::_Any_data&amp;, std::integral_constant&lt;bool, false&gt;) (1 samples, 1.39%)</title><rect x="1108.1" y="580" width="16.3" height="15.0" fill="rgb(60,174,174)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="590.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::vector&lt;char, std::allocator&lt;char&gt; &gt;::_M_range_initialize&lt;char*&gt;(char*, char*, std::forward_iterator_tag) (5 samples, 6.94%)</title><rect x="895.0" y="484" width="81.9" height="15.0" fill="rgb(61,175,175)" rx="2" ry="2" />
+<text text-anchor="" x="898.00" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >void std:..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__dynamic_cast&lt;000000000008bf70&gt; (1 samples, 1.39%)</title><rect x="354.2" y="500" width="16.4" height="15.0" fill="rgb(53,168,168)" rx="2" ry="2" />
+<text text-anchor="" x="357.17" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_try_char() (1 samples, 1.39%)</title><rect x="1124.4" y="308" width="16.4" height="15.0" fill="rgb(62,176,176)" rx="2" ry="2" />
+<text text-anchor="" x="1127.44" y="318.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; std::__lower_bound&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, char, __gnu_cxx::__ops::_Iter_less_val&gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, char const&amp;, __gnu_cxx::__ops::_Iter_less_val) (3 samples, 4.17%)</title><rect x="649.2" y="452" width="49.1" height="15.0" fill="rgb(78,191,191)" rx="2" ry="2" />
+<text text-anchor="" x="652.17" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__gn..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt;::begin() const (1 samples, 1.39%)</title><rect x="1042.5" y="436" width="16.4" height="15.0" fill="rgb(74,187,187)" rx="2" ry="2" />
+<text text-anchor="" x="1045.50" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_atom() (1 samples, 1.39%)</title><rect x="600.0" y="372" width="16.4" height="15.0" fill="rgb(72,185,185)" rx="2" ry="2" />
+<text text-anchor="" x="603.00" y="382.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_State(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; const&amp;) (1 samples, 1.39%)</title><rect x="1140.8" y="388" width="16.4" height="15.0" fill="rgb(56,171,171)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="398.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="260" width="16.4" height="15.0" fill="rgb(86,198,198)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="270.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Function_base::~_Function_base()&lt;0000000000404578&gt; (1 samples, 1.39%)</title><rect x="1108.1" y="548" width="16.3" height="15.0" fill="rgb(51,166,166)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="558.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>bool __gnu_cxx::operator!=&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask const*, std::vector&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask, std::allocator&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask&gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask const*, std::vector&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask, std::allocator&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask&gt; &gt; &gt; const&amp;, __gnu_cxx::__normal_iterator&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask const*, std::vector&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask, std::allocator&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask&gt; &gt; &gt; const&amp;) (1 samples, 1.39%)</title><rect x="108.3" y="468" width="16.4" height="15.0" fill="rgb(108,218,218)" rx="2" ry="2" />
+<text text-anchor="" x="111.33" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_disjunction() (69 samples, 95.83%)</title><rect x="10.0" y="228" width="1130.8" height="15.0" fill="rgb(100,211,211)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="238.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_disjunction()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="244" width="16.4" height="15.0" fill="rgb(96,207,207)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="254.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>0x00007ffc6b49ebb4 (1 samples, 1.39%)</title><rect x="42.8" y="468" width="16.4" height="15.0" fill="rgb(63,177,177)" rx="2" ry="2" />
+<text text-anchor="" x="45.78" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_NFA&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_insert_state(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;) (2 samples, 2.78%)</title><rect x="1140.8" y="244" width="32.8" height="15.0" fill="rgb(86,198,198)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="254.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_init&lt;0000000000402e88&gt; (1 samples, 1.39%)</title><rect x="42.8" y="484" width="16.4" height="15.0" fill="rgb(56,171,171)" rx="2" ry="2" />
+<text text-anchor="" x="45.78" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Function_base::_Base_manager&lt;std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt; &gt;::_M_manager(std::_Any_data&amp;, std::_Any_data const&amp;, std::_Manager_operation) (1 samples, 1.39%)</title><rect x="1140.8" y="420" width="16.4" height="15.0" fill="rgb(54,168,168)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="430.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;char, std::allocator&lt;char&gt; &gt;::vector&lt;char*, void&gt;(char*, char*, std::allocator&lt;char&gt; const&amp;) (7 samples, 9.72%)</title><rect x="386.9" y="484" width="114.8" height="15.0" fill="rgb(80,193,193)" rx="2" ry="2" />
+<text text-anchor="" x="389.94" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::vector&lt;ch..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::_Destroy&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*&gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*) (1 samples, 1.39%)</title><rect x="1108.1" y="468" width="16.3" height="15.0" fill="rgb(107,217,217)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::collate&lt;char&gt;::transform(char const*, char const*) const (3 samples, 4.17%)</title><rect x="305.0" y="500" width="49.2" height="15.0" fill="rgb(103,213,213)" rx="2" ry="2" />
+<text text-anchor="" x="308.00" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std:..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_disjunction() (35 samples, 48.61%)</title><rect x="10.0" y="340" width="573.6" height="15.0" fill="rgb(73,186,186)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="350.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_disjunction()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::copy&lt;char*, char*&gt;(char*, char*, char*) (2 samples, 2.78%)</title><rect x="436.1" y="580" width="32.8" height="15.0" fill="rgb(76,189,189)" rx="2" ry="2" />
+<text text-anchor="" x="439.11" y="590.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >ch..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_atom() (34 samples, 47.22%)</title><rect x="26.4" y="388" width="557.2" height="15.0" fill="rgb(67,180,180)" rx="2" ry="2" />
+<text text-anchor="" x="29.39" y="398.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_atom()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::iterator_traits&lt;char*&gt;::difference_type std::distance&lt;char*&gt;(char*, char*) (1 samples, 1.39%)</title><rect x="223.1" y="564" width="16.3" height="15.0" fill="rgb(100,211,211)" rx="2" ry="2" />
+<text text-anchor="" x="226.06" y="574.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask const*, std::vector&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask, std::allocator&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask&gt; &gt; &gt;::base() const (1 samples, 1.39%)</title><rect x="108.3" y="484" width="16.4" height="15.0" fill="rgb(58,172,172)" rx="2" ry="2" />
+<text text-anchor="" x="111.33" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;char&gt;(char const*, char const*, char*) (1 samples, 1.39%)</title><rect x="911.4" y="596" width="16.4" height="15.0" fill="rgb(101,212,212)" rx="2" ry="2" />
+<text text-anchor="" x="914.39" y="606.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>0xffffffffffffffff (72 samples, 100.00%)</title><rect x="10.0" y="52" width="1180.0" height="15.0" fill="rgb(75,187,187)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="62.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >0xffffffffffffffff</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__GI___strnlen (1 samples, 1.39%)</title><rect x="829.4" y="532" width="16.4" height="15.0" fill="rgb(93,205,205)" rx="2" ry="2" />
+<text text-anchor="" x="832.44" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::vector&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::_M_emplace_back_aux&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="583.6" y="404" width="16.4" height="15.0" fill="rgb(51,166,166)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="414.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;char, std::allocator&lt;char&gt; &gt;::begin() const (1 samples, 1.39%)</title><rect x="1140.8" y="484" width="16.4" height="15.0" fill="rgb(52,167,167)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="596" width="16.4" height="15.0" fill="rgb(65,179,179)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="606.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::iterator_traits&lt;char*&gt;::difference_type std::__distance&lt;char*&gt;(char*, char*, std::random_access_iterator_tag) (1 samples, 1.39%)</title><rect x="223.1" y="580" width="16.3" height="15.0" fill="rgb(78,191,191)" rx="2" ry="2" />
+<text text-anchor="" x="226.06" y="590.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::regex_traits&lt;char&gt;::isctype(char, std::__cxx11::regex_traits&lt;char&gt;::_RegexMask) const (2 samples, 2.78%)</title><rect x="501.7" y="468" width="32.7" height="15.0" fill="rgb(76,189,189)" rx="2" ry="2" />
+<text text-anchor="" x="504.67" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; std::__lower_bound&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, char, __gnu_cxx::__ops::_Iter_less_val&gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, char const&amp;, __gnu_cxx::__ops::_Iter_less_val) (1 samples, 1.39%)</title><rect x="141.1" y="484" width="16.4" height="15.0" fill="rgb(90,202,202)" rx="2" ry="2" />
+<text text-anchor="" x="144.11" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask, std::allocator&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask&gt; &gt;::end() const (1 samples, 1.39%)</title><rect x="1058.9" y="436" width="16.4" height="15.0" fill="rgb(109,219,219)" rx="2" ry="2" />
+<text text-anchor="" x="1061.89" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>case1()&lt;00000000004037a8&gt; (72 samples, 100.00%)</title><rect x="10.0" y="116" width="1180.0" height="15.0" fill="rgb(91,203,203)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="126.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >case1()&lt;00000000004037a8&gt;</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::vector&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::_M_emplace_back_aux&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="1108.1" y="436" width="16.3" height="15.0" fill="rgb(107,218,218)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::bitset&lt;256ul&gt;::reference::reference(std::bitset&lt;256ul&gt;&amp;, unsigned long) (1 samples, 1.39%)</title><rect x="567.2" y="468" width="16.4" height="15.0" fill="rgb(51,166,166)" rx="2" ry="2" />
+<text text-anchor="" x="570.22" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::allocator_traits&lt;std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::construct&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;&amp;, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="583.6" y="420" width="16.4" height="15.0" fill="rgb(55,169,169)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="430.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_quantifier() (1 samples, 1.39%)</title><rect x="1108.1" y="356" width="16.3" height="15.0" fill="rgb(100,211,211)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="366.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_regex&lt;char, std::__cxx11::regex_traits&lt;char&gt; &gt;::basic_regex&lt;char const*&gt;(char const*, char const*, std::locale, std::regex_constants::syntax_option_type) (71 samples, 98.61%)</title><rect x="10.0" y="180" width="1163.6" height="15.0" fill="rgb(76,189,189)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="190.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__cxx11::basic_regex&lt;char, std::__cxx11::regex_traits&lt;char&gt; &gt;::basic_regex&lt;char const*&gt;(char const*, char const*, std::locale, std::regex_constants::syntax_o..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::collate&lt;char&gt;::transform(char const*, char const*) const (6 samples, 8.33%)</title><rect x="763.9" y="468" width="98.3" height="15.0" fill="rgb(68,182,182)" rx="2" ry="2" />
+<text text-anchor="" x="766.89" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__cxx1..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::_Destroy&lt;char*, char&gt;(char*, char*, std::allocator&lt;char&gt;&amp;) (1 samples, 1.39%)</title><rect x="1026.1" y="468" width="16.4" height="15.0" fill="rgb(85,197,197)" rx="2" ry="2" />
+<text text-anchor="" x="1029.11" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; std::__find_if&lt;__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__ops::_Iter_equals_val&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&gt; &gt;(__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__ops::_Iter_equals_val&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&gt;, std::random_access_iterator_tag) (1 samples, 1.39%)</title><rect x="75.6" y="500" width="16.3" height="15.0" fill="rgb(61,175,175)" rx="2" ry="2" />
+<text text-anchor="" x="78.56" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__libc_start_main&lt;0000000000020740&gt; (72 samples, 100.00%)</title><rect x="10.0" y="84" width="1180.0" height="15.0" fill="rgb(104,214,214)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="94.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__libc_start_main&lt;0000000000020740&gt;</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::function&lt;bool (char)&gt;::swap(std::function&lt;bool (char)&gt;&amp;) (1 samples, 1.39%)</title><rect x="1157.2" y="372" width="16.4" height="15.0" fill="rgb(93,204,204)" rx="2" ry="2" />
+<text text-anchor="" x="1160.22" y="382.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="324" width="16.4" height="15.0" fill="rgb(69,182,182)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="334.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::iterator_traits&lt;char*&gt;::difference_type std::distance&lt;char*&gt;(char*, char*) (1 samples, 1.39%)</title><rect x="747.5" y="532" width="16.4" height="15.0" fill="rgb(75,188,188)" rx="2" ry="2" />
+<text text-anchor="" x="750.50" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__memset_sse2 (1 samples, 1.39%)</title><rect x="813.1" y="516" width="16.3" height="15.0" fill="rgb(76,189,189)" rx="2" ry="2" />
+<text text-anchor="" x="816.06" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::~basic_string() (1 samples, 1.39%)</title><rect x="255.8" y="500" width="16.4" height="15.0" fill="rgb(60,174,174)" rx="2" ry="2" />
+<text text-anchor="" x="258.83" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="276" width="16.4" height="15.0" fill="rgb(74,187,187)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="286.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::push_back(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (2 samples, 2.78%)</title><rect x="1140.8" y="260" width="32.8" height="15.0" fill="rgb(91,202,202)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="270.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_NFA&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_insert_state(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;) (1 samples, 1.39%)</title><rect x="1108.1" y="388" width="16.3" height="15.0" fill="rgb(93,205,205)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="398.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_rep_once_more(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="308" width="16.4" height="15.0" fill="rgb(79,192,192)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="318.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;* std::__uninitialized_move_if_noexcept_a&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;&amp;) (1 samples, 1.39%)</title><rect x="1140.8" y="308" width="16.4" height="15.0" fill="rgb(67,181,181)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="318.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::allocator_traits&lt;std::allocator&lt;char&gt; &gt;::allocate(std::allocator&lt;char&gt;&amp;, unsigned long) (2 samples, 2.78%)</title><rect x="944.2" y="516" width="32.7" height="15.0" fill="rgb(96,207,207)" rx="2" ry="2" />
+<text text-anchor="" x="947.17" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;char, std::allocator&lt;char&gt; &gt;::begin() const (1 samples, 1.39%)</title><rect x="534.4" y="468" width="16.4" height="15.0" fill="rgb(100,211,211)" rx="2" ry="2" />
+<text text-anchor="" x="537.44" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::collate&lt;char&gt;::_M_transform(char*, char const*, unsigned long) const (1 samples, 1.39%)</title><rect x="337.8" y="532" width="16.4" height="15.0" fill="rgb(66,180,180)" rx="2" ry="2" />
+<text text-anchor="" x="340.78" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative() (1 samples, 1.39%)</title><rect x="600.0" y="340" width="16.4" height="15.0" fill="rgb(56,171,171)" rx="2" ry="2" />
+<text text-anchor="" x="603.00" y="350.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;char, std::allocator&lt;char&gt; &gt;::vector(std::vector&lt;char, std::allocator&lt;char&gt; &gt; const&amp;) (1 samples, 1.39%)</title><rect x="1140.8" y="468" width="16.4" height="15.0" fill="rgb(96,207,207)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct&lt;char*&gt;(char*, char*, std::forward_iterator_tag) (1 samples, 1.39%)</title><rect x="223.1" y="548" width="16.3" height="15.0" fill="rgb(60,174,174)" rx="2" ry="2" />
+<text text-anchor="" x="226.06" y="558.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="372" width="16.4" height="15.0" fill="rgb(106,216,216)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="382.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative() (36 samples, 50.00%)</title><rect x="10.0" y="276" width="590.0" height="15.0" fill="rgb(93,205,205)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="286.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="740" width="16.4" height="15.0" fill="rgb(67,181,181)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="750.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="612" width="16.4" height="15.0" fill="rgb(70,184,184)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="622.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_rep_once_more(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="628" width="16.4" height="15.0" fill="rgb(56,170,170)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="638.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_rep_once_more(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="532" width="16.4" height="15.0" fill="rgb(79,192,192)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;* std::uninitialized_copy&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*&gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*) (1 samples, 1.39%)</title><rect x="1140.8" y="340" width="16.4" height="15.0" fill="rgb(85,197,197)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="350.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::__copy_move_a2&lt;false, char*, char*&gt;(char*, char*, char*) (2 samples, 2.78%)</title><rect x="436.1" y="596" width="32.8" height="15.0" fill="rgb(58,172,172)" rx="2" ry="2" />
+<text text-anchor="" x="439.11" y="606.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >ch..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt;::_BracketMatcher(std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt; const&amp;) (1 samples, 1.39%)</title><rect x="1140.8" y="452" width="16.4" height="15.0" fill="rgb(77,190,190)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_rep_once_more(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="724" width="16.4" height="15.0" fill="rgb(50,165,165)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="734.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt;::_M_apply(char, std::integral_constant&lt;bool, false&gt;) const (33 samples, 45.83%)</title><rect x="26.4" y="452" width="540.8" height="15.0" fill="rgb(101,211,211)" rx="2" ry="2" />
+<text text-anchor="" x="29.39" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, fa..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__dynamic_cast&lt;000000000008bf70&gt; (1 samples, 1.39%)</title><rect x="288.6" y="516" width="16.4" height="15.0" fill="rgb(65,178,178)" rx="2" ry="2" />
+<text text-anchor="" x="291.61" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::basic_string&lt;char*, void&gt;(char*, char*, std::allocator&lt;char&gt; const&amp;) (1 samples, 1.39%)</title><rect x="747.5" y="468" width="16.4" height="15.0" fill="rgb(108,219,219)" rx="2" ry="2" />
+<text text-anchor="" x="750.50" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::collate&lt;char&gt;::do_transform(char const*, char const*) const (3 samples, 4.17%)</title><rect x="305.0" y="516" width="49.2" height="15.0" fill="rgb(82,194,194)" rx="2" ry="2" />
+<text text-anchor="" x="308.00" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std:..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="788" width="16.4" height="15.0" fill="rgb(64,178,178)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="798.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_rep_once_more(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="580" width="16.4" height="15.0" fill="rgb(87,199,199)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="590.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_rep_once_more(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="772" width="16.4" height="15.0" fill="rgb(50,165,165)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="782.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; std::__find_if&lt;__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__ops::_Iter_equals_val&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&gt; &gt;(__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__ops::_Iter_equals_val&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&gt;, std::random_access_iterator_tag) (1 samples, 1.39%)</title><rect x="632.8" y="468" width="16.4" height="15.0" fill="rgb(109,219,219)" rx="2" ry="2" />
+<text text-anchor="" x="635.78" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>bool __gnu_cxx::operator!=&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; const&amp;, __gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; const&amp;) (1 samples, 1.39%)</title><rect x="91.9" y="468" width="16.4" height="15.0" fill="rgb(91,203,203)" rx="2" ry="2" />
+<text text-anchor="" x="94.94" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; std::__find_if&lt;__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__ops::_Iter_equals_val&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&gt; &gt;(__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__ops::_Iter_equals_val&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&gt;) (1 samples, 1.39%)</title><rect x="75.6" y="484" width="16.3" height="15.0" fill="rgb(92,203,203)" rx="2" ry="2" />
+<text text-anchor="" x="78.56" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::vector&lt;char, std::allocator&lt;char&gt; &gt;::_M_initialize_dispatch&lt;char*&gt;(char*, char*, std::__false_type) (7 samples, 9.72%)</title><rect x="386.9" y="500" width="114.8" height="15.0" fill="rgb(61,175,175)" rx="2" ry="2" />
+<text text-anchor="" x="389.94" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >void std::vect..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="884" width="16.4" height="15.0" fill="rgb(103,213,213)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="894.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative() (1 samples, 1.39%)</title><rect x="10.0" y="372" width="16.4" height="15.0" fill="rgb(79,191,191)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="382.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt;::_M_ready() (34 samples, 47.22%)</title><rect x="26.4" y="420" width="557.2" height="15.0" fill="rgb(65,179,179)" rx="2" ry="2" />
+<text text-anchor="" x="29.39" y="430.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, fals..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_NFA&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_insert_accept() (2 samples, 2.78%)</title><rect x="1140.8" y="228" width="32.8" height="15.0" fill="rgb(109,219,219)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="238.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; std::__cxx11::regex_traits&lt;char&gt;::transform&lt;char*&gt;(char*, char*) const (11 samples, 15.28%)</title><rect x="173.9" y="484" width="180.3" height="15.0" fill="rgb(107,217,217)" rx="2" ry="2" />
+<text text-anchor="" x="176.89" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__cxx11::basic_str..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative() (36 samples, 50.00%)</title><rect x="10.0" y="292" width="590.0" height="15.0" fill="rgb(67,180,180)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="302.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Vector_base&lt;char, std::allocator&lt;char&gt; &gt;::_M_get_Tp_allocator() (1 samples, 1.39%)</title><rect x="993.3" y="468" width="16.4" height="15.0" fill="rgb(66,180,180)" rx="2" ry="2" />
+<text text-anchor="" x="996.33" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;* std::__uninitialized_copy_a&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;&amp;) (1 samples, 1.39%)</title><rect x="1140.8" y="324" width="16.4" height="15.0" fill="rgb(71,184,184)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="334.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::new_allocator&lt;char&gt;::allocate(unsigned long, void const*) (1 samples, 1.39%)</title><rect x="960.6" y="532" width="16.3" height="15.0" fill="rgb(89,200,200)" rx="2" ry="2" />
+<text text-anchor="" x="963.56" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__memset_sse2 (1 samples, 1.39%)</title><rect x="305.0" y="548" width="16.4" height="15.0" fill="rgb(104,214,214)" rx="2" ry="2" />
+<text text-anchor="" x="308.00" y="558.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="804" width="16.4" height="15.0" fill="rgb(66,180,180)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="814.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>bool __gnu_cxx::operator!=&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; const&amp;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; const&amp;) (1 samples, 1.39%)</title><rect x="698.3" y="452" width="16.4" height="15.0" fill="rgb(109,219,219)" rx="2" ry="2" />
+<text text-anchor="" x="701.33" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::uninitialized_copy&lt;char*, char*&gt;(char*, char*, char*) (2 samples, 2.78%)</title><rect x="895.0" y="516" width="32.8" height="15.0" fill="rgb(90,202,202)" rx="2" ry="2" />
+<text text-anchor="" x="898.00" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >ch..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="420" width="16.4" height="15.0" fill="rgb(65,179,179)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="430.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask const*, std::vector&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask, std::allocator&lt;std::__cxx11::regex_traits&lt;char&gt;::_RegexMask&gt; &gt; &gt;::__normal_iterator(std::__cxx11::regex_traits&lt;char&gt;::_RegexMask const* const&amp;) (1 samples, 1.39%)</title><rect x="1058.9" y="452" width="16.4" height="15.0" fill="rgb(75,188,188)" rx="2" ry="2" />
+<text text-anchor="" x="1061.89" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="692" width="16.4" height="15.0" fill="rgb(102,213,213)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="702.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="484" width="16.4" height="15.0" fill="rgb(54,168,168)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt;::_M_make_cache(std::integral_constant&lt;bool, true&gt;) (34 samples, 47.22%)</title><rect x="26.4" y="436" width="557.2" height="15.0" fill="rgb(72,185,185)" rx="2" ry="2" />
+<text text-anchor="" x="29.39" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, fals..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_atom() (36 samples, 50.00%)</title><rect x="10.0" y="324" width="590.0" height="15.0" fill="rgb(59,173,173)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="334.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_atom()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>bool std::binary_search&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, char&gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, char const&amp;) (3 samples, 4.17%)</title><rect x="124.7" y="468" width="49.2" height="15.0" fill="rgb(59,173,173)" rx="2" ry="2" />
+<text text-anchor="" x="127.72" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >bool..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt;::~_BracketMatcher() (1 samples, 1.39%)</title><rect x="1108.1" y="596" width="16.3" height="15.0" fill="rgb(101,212,212)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="606.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::iterator_traits&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; &gt;::difference_type std::__distance&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, std::random_access_iterator_tag) (3 samples, 4.17%)</title><rect x="649.2" y="484" width="49.1" height="15.0" fill="rgb(74,187,187)" rx="2" ry="2" />
+<text text-anchor="" x="652.17" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std:..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::bitset&lt;256ul&gt;::operator[](unsigned long) (1 samples, 1.39%)</title><rect x="567.2" y="452" width="16.4" height="15.0" fill="rgb(78,190,190)" rx="2" ry="2" />
+<text text-anchor="" x="570.22" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_term() (36 samples, 50.00%)</title><rect x="10.0" y="308" width="590.0" height="15.0" fill="rgb(81,194,194)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="318.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_term()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_NFA&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_insert_subexpr_begin() (1 samples, 1.39%)</title><rect x="583.6" y="340" width="16.4" height="15.0" fill="rgb(85,197,197)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="350.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::_Destroy_aux&lt;false&gt;::__destroy&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*&gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*) (1 samples, 1.39%)</title><rect x="1108.1" y="484" width="16.3" height="15.0" fill="rgb(109,219,219)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_insert_character_class_matcher&lt;false, false&gt;() (34 samples, 47.22%)</title><rect x="26.4" y="404" width="557.2" height="15.0" fill="rgb(67,181,181)" rx="2" ry="2" />
+<text text-anchor="" x="29.39" y="414.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >void std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_insert_..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>bool std::regex_match&lt;std::char_traits&lt;char&gt;, std::allocator&lt;char&gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, char, std::__cxx11::regex_traits&lt;char&gt; &gt;(std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&amp;, std::__cxx11::match_results&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::const_iterator, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; &gt;&amp;, std::__cxx11::basic_regex&lt;char, std::__cxx11::regex_traits&lt;char&gt; &gt; const&amp;, std::regex_constants::match_flag_type) (1 samples, 1.39%)</title><rect x="1173.6" y="132" width="16.4" height="15.0" fill="rgb(108,219,219)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="142.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::vector&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::emplace_back&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="1108.1" y="420" width="16.3" height="15.0" fill="rgb(68,181,181)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="430.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="548" width="16.4" height="15.0" fill="rgb(72,185,185)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="558.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_disjunction() (32 samples, 44.44%)</title><rect x="600.0" y="308" width="524.4" height="15.0" fill="rgb(68,181,181)" rx="2" ry="2" />
+<text text-anchor="" x="603.00" y="318.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_disjunct..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_insert_character_class_matcher&lt;false, false&gt;() (30 samples, 41.67%)</title><rect x="616.4" y="372" width="491.7" height="15.0" fill="rgb(53,168,168)" rx="2" ry="2" />
+<text text-anchor="" x="619.39" y="382.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >void std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;::difference_type __gnu_cxx::operator-&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; const&amp;, __gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; const&amp;) (1 samples, 1.39%)</title><rect x="75.6" y="516" width="16.3" height="15.0" fill="rgb(72,185,185)" rx="2" ry="2" />
+<text text-anchor="" x="78.56" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::vector&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::emplace_back&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="583.6" y="388" width="16.4" height="15.0" fill="rgb(52,167,167)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="398.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__GI___strxfrm_l (2 samples, 2.78%)</title><rect x="305.0" y="532" width="32.8" height="15.0" fill="rgb(66,180,180)" rx="2" ry="2" />
+<text text-anchor="" x="308.00" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__stpncpy_sse2 (1 samples, 1.39%)</title><rect x="829.4" y="516" width="16.4" height="15.0" fill="rgb(70,183,183)" rx="2" ry="2" />
+<text text-anchor="" x="832.44" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::__copy_move&lt;false, true, std::random_access_iterator_tag&gt;::__copy_m&lt;char&gt;(char const*, char const*, char*) (1 samples, 1.39%)</title><rect x="452.5" y="628" width="16.4" height="15.0" fill="rgb(54,168,168)" rx="2" ry="2" />
+<text text-anchor="" x="455.50" y="638.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::vector&lt;char, std::allocator&lt;char&gt; &gt;::_M_initialize_dispatch&lt;char*&gt;(char*, char*, std::__false_type) (5 samples, 6.94%)</title><rect x="895.0" y="468" width="81.9" height="15.0" fill="rgb(85,197,197)" rx="2" ry="2" />
+<text text-anchor="" x="898.00" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >void std:..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct&lt;char*&gt;(char*, char*) (1 samples, 1.39%)</title><rect x="747.5" y="484" width="16.4" height="15.0" fill="rgb(81,194,194)" rx="2" ry="2" />
+<text text-anchor="" x="750.50" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="756" width="16.4" height="15.0" fill="rgb(105,215,215)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="766.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::function&lt;bool (char)&gt;::function(std::function&lt;bool (char)&gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="583.6" y="468" width="16.4" height="15.0" fill="rgb(82,195,195)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="916" width="16.4" height="15.0" fill="rgb(95,206,206)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="926.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="228" width="16.4" height="15.0" fill="rgb(75,188,188)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="238.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="868" width="16.4" height="15.0" fill="rgb(74,187,187)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="878.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::__uninitialized_copy_a&lt;char*, char*, char&gt;(char*, char*, char*, std::allocator&lt;char&gt;&amp;) (3 samples, 4.17%)</title><rect x="419.7" y="532" width="49.2" height="15.0" fill="rgb(79,191,191)" rx="2" ry="2" />
+<text text-anchor="" x="422.72" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >char..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::new_allocator&lt;char&gt;::allocate(unsigned long, void const*) (2 samples, 2.78%)</title><rect x="468.9" y="564" width="32.8" height="15.0" fill="rgb(95,206,206)" rx="2" ry="2" />
+<text text-anchor="" x="471.89" y="574.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="660" width="16.4" height="15.0" fill="rgb(87,199,199)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="670.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_NFA&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_insert_repeat(long, long, bool) (1 samples, 1.39%)</title><rect x="1108.1" y="372" width="16.3" height="15.0" fill="rgb(56,171,171)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="382.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::enable_if&lt;std::__detail::__is_contiguous_normal_iter&lt;char const*&gt;::value, std::shared_ptr&lt;std::__detail::_NFA&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; const&gt; &gt;::type std::__detail::__compile_nfa&lt;char const*, std::__cxx11::regex_traits&lt;char&gt; &gt;(char const*, char const*, std::__cxx11::regex_traits&lt;char&gt;::locale_type const&amp;, std::regex_constants::syntax_option_type) (71 samples, 98.61%)</title><rect x="10.0" y="196" width="1163.6" height="15.0" fill="rgb(69,183,183)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="206.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::enable_if&lt;std::__detail::__is_contiguous_normal_iter&lt;char const*&gt;::value, std::shared_ptr&lt;std::__detail::_NFA&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; const&gt; &gt;::ty..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_main(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode) (1 samples, 1.39%)</title><rect x="1173.6" y="196" width="16.4" height="15.0" fill="rgb(65,179,179)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="206.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_ZNKUlRKT_E0_clIA15_cEEDaS1_&lt;0000000000403776&gt; (71 samples, 98.61%)</title><rect x="10.0" y="132" width="1163.6" height="15.0" fill="rgb(66,180,180)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="142.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >_ZNKUlRKT_E0_clIA15_cEEDaS1_&lt;0000000000403776&gt;</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__GI___strnlen (1 samples, 1.39%)</title><rect x="321.4" y="564" width="16.4" height="15.0" fill="rgb(62,176,176)" rx="2" ry="2" />
+<text text-anchor="" x="324.39" y="574.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct_aux&lt;char*&gt;(char*, char*, std::__false_type) (2 samples, 2.78%)</title><rect x="206.7" y="532" width="32.7" height="15.0" fill="rgb(64,178,178)" rx="2" ry="2" />
+<text text-anchor="" x="209.67" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >vo..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::function&lt;bool (char)&gt;::function(std::function&lt;bool (char)&gt; const&amp;) (1 samples, 1.39%)</title><rect x="1140.8" y="404" width="16.4" height="15.0" fill="rgb(82,194,194)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="414.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void __gnu_cxx::new_allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;::construct&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="1157.2" y="324" width="16.4" height="15.0" fill="rgb(109,219,219)" rx="2" ry="2" />
+<text text-anchor="" x="1160.22" y="334.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;::base() const (1 samples, 1.39%)</title><rect x="75.6" y="532" width="16.3" height="15.0" fill="rgb(108,218,218)" rx="2" ry="2" />
+<text text-anchor="" x="78.56" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct&lt;char*&gt;(char*, char*) (2 samples, 2.78%)</title><rect x="206.7" y="516" width="32.7" height="15.0" fill="rgb(100,211,211)" rx="2" ry="2" />
+<text text-anchor="" x="209.67" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >vo..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_append(char const*, unsigned long) (1 samples, 1.39%)</title><rect x="845.8" y="500" width="16.4" height="15.0" fill="rgb(83,195,195)" rx="2" ry="2" />
+<text text-anchor="" x="848.83" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__cxxabiv1::__si_class_type_info::__do_dyncast(long, __cxxabiv1::__class_type_info::__sub_kind, __cxxabiv1::__class_type_info const*, void const*, __cxxabiv1::__class_type_info const*, void const*, __cxxabiv1::__class_type_info::__dyncast_result&amp;) const&lt;000000000008e2a0&gt; (1 samples, 1.39%)</title><rect x="288.6" y="532" width="16.4" height="15.0" fill="rgb(57,171,171)" rx="2" ry="2" />
+<text text-anchor="" x="291.61" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>0x00007ffc6b49e9bf (1 samples, 1.39%)</title><rect x="206.7" y="548" width="16.4" height="15.0" fill="rgb(60,174,174)" rx="2" ry="2" />
+<text text-anchor="" x="209.67" y="558.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>operator new[](unsigned long) (1 samples, 1.39%)</title><rect x="485.3" y="580" width="16.4" height="15.0" fill="rgb(84,196,196)" rx="2" ry="2" />
+<text text-anchor="" x="488.28" y="590.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="436" width="16.4" height="15.0" fill="rgb(96,207,207)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="708" width="16.4" height="15.0" fill="rgb(94,206,206)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="718.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::iterator_traits&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; &gt;::difference_type std::distance&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;) (3 samples, 4.17%)</title><rect x="649.2" y="468" width="49.1" height="15.0" fill="rgb(66,179,179)" rx="2" ry="2" />
+<text text-anchor="" x="652.17" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std:..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::basic_string&lt;char*, void&gt;(char*, char*, std::allocator&lt;char&gt; const&amp;) (2 samples, 2.78%)</title><rect x="206.7" y="500" width="32.7" height="15.0" fill="rgb(58,172,172)" rx="2" ry="2" />
+<text text-anchor="" x="209.67" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Vector_base&lt;char, std::allocator&lt;char&gt; &gt;::_M_allocate(unsigned long) (3 samples, 4.17%)</title><rect x="927.8" y="500" width="49.1" height="15.0" fill="rgb(74,187,187)" rx="2" ry="2" />
+<text text-anchor="" x="930.78" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std:..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_term() (1 samples, 1.39%)</title><rect x="600.0" y="356" width="16.4" height="15.0" fill="rgb(50,165,165)" rx="2" ry="2" />
+<text text-anchor="" x="603.00" y="366.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; std::__cxx11::regex_traits&lt;char&gt;::transform_primary&lt;char*&gt;(char*, char*) const (20 samples, 27.78%)</title><rect x="714.7" y="436" width="327.8" height="15.0" fill="rgb(70,183,183)" rx="2" ry="2" />
+<text text-anchor="" x="717.72" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__cxx11::basic_string&lt;char, std::char_t..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt;::_M_apply(char, std::integral_constant&lt;bool, false&gt;) const (28 samples, 38.89%)</title><rect x="616.4" y="420" width="458.9" height="15.0" fill="rgb(96,207,207)" rx="2" ry="2" />
+<text text-anchor="" x="619.39" y="430.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>0x000000000192a008 (2 samples, 2.78%)</title><rect x="714.7" y="452" width="32.8" height="15.0" fill="rgb(79,192,192)" rx="2" ry="2" />
+<text text-anchor="" x="717.72" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >0x..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>operator new[](unsigned long) (1 samples, 1.39%)</title><rect x="960.6" y="548" width="16.3" height="15.0" fill="rgb(101,211,211)" rx="2" ry="2" />
+<text text-anchor="" x="963.56" y="558.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="500" width="16.4" height="15.0" fill="rgb(78,191,191)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="388" width="16.4" height="15.0" fill="rgb(71,184,184)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="398.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_regex&lt;char, std::__cxx11::regex_traits&lt;char&gt; &gt;::basic_regex&lt;char const*&gt;(char const*, char const*, std::regex_constants::syntax_option_type) (71 samples, 98.61%)</title><rect x="10.0" y="164" width="1163.6" height="15.0" fill="rgb(104,214,214)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="174.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__cxx11::basic_regex&lt;char, std::__cxx11::regex_traits&lt;char&gt; &gt;::basic_regex&lt;char const*&gt;(char const*, char const*, std::regex_constants::syntax_option_type)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt;::_M_ready() (30 samples, 41.67%)</title><rect x="616.4" y="388" width="491.7" height="15.0" fill="rgb(91,203,203)" rx="2" ry="2" />
+<text text-anchor="" x="619.39" y="398.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, fa..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Vector_base&lt;char, std::allocator&lt;char&gt; &gt;::~_Vector_base() (1 samples, 1.39%)</title><rect x="1009.7" y="468" width="16.4" height="15.0" fill="rgb(99,210,210)" rx="2" ry="2" />
+<text text-anchor="" x="1012.72" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Function_base::_Base_manager&lt;std::__detail::_BracketMatcher&lt;std::__cxx11::regex_traits&lt;char&gt;, false, false&gt; &gt;::_M_manager(std::_Any_data&amp;, std::_Any_data const&amp;, std::_Manager_operation) (1 samples, 1.39%)</title><rect x="1108.1" y="564" width="16.3" height="15.0" fill="rgb(55,169,169)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="574.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::bitset&lt;256ul&gt;::operator[](unsigned long) (1 samples, 1.39%)</title><rect x="1075.3" y="420" width="16.4" height="15.0" fill="rgb(58,172,172)" rx="2" ry="2" />
+<text text-anchor="" x="1078.28" y="430.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_State(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="583.6" y="452" width="16.4" height="15.0" fill="rgb(106,216,216)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::swap&lt;bool (*)(std::_Any_data&amp;, std::_Any_data const&amp;, std::_Manager_operation)&gt;(bool (*&amp;)(std::_Any_data&amp;, std::_Any_data const&amp;, std::_Manager_operation), bool (*&amp;)(std::_Any_data&amp;, std::_Any_data const&amp;, std::_Manager_operation)) (1 samples, 1.39%)</title><rect x="583.6" y="500" width="16.4" height="15.0" fill="rgb(80,193,193)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="468" width="16.4" height="15.0" fill="rgb(95,206,206)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt;::~vector() (1 samples, 1.39%)</title><rect x="1108.1" y="612" width="16.3" height="15.0" fill="rgb(102,212,212)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="622.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;* std::__uninitialized_copy&lt;false&gt;::__uninit_copy&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*&gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*) (1 samples, 1.39%)</title><rect x="1140.8" y="356" width="16.4" height="15.0" fill="rgb(93,204,204)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="366.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::size() const (1 samples, 1.39%)</title><rect x="239.4" y="500" width="16.4" height="15.0" fill="rgb(95,206,206)" rx="2" ry="2" />
+<text text-anchor="" x="242.44" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::function&lt;bool (char)&gt;::~function() (1 samples, 1.39%)</title><rect x="1108.1" y="532" width="16.3" height="15.0" fill="rgb(107,218,218)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="542.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>bool std::binary_search&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, char&gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;, char const&amp;) (4 samples, 5.56%)</title><rect x="649.2" y="436" width="65.5" height="15.0" fill="rgb(78,191,191)" rx="2" ry="2" />
+<text text-anchor="" x="652.17" y="446.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >bool st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_init&lt;0000000000402e88&gt; (2 samples, 2.78%)</title><rect x="714.7" y="468" width="32.8" height="15.0" fill="rgb(105,215,215)" rx="2" ry="2" />
+<text text-anchor="" x="717.72" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >_i..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::_Vector_base&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt;::~_Vector_base() (1 samples, 1.39%)</title><rect x="1108.1" y="628" width="16.3" height="15.0" fill="rgb(106,217,217)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="638.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;char, std::allocator&lt;char&gt; &gt;::~vector() (4 samples, 5.56%)</title><rect x="976.9" y="452" width="65.6" height="15.0" fill="rgb(96,207,207)" rx="2" ry="2" />
+<text text-anchor="" x="979.94" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::ve..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::allocator_traits&lt;std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::construct&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;&amp;, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="1157.2" y="308" width="16.4" height="15.0" fill="rgb(56,170,170)" rx="2" ry="2" />
+<text text-anchor="" x="1160.22" y="318.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_Compiler(char const*, char const*, std::locale const&amp;, std::regex_constants::syntax_option_type) (71 samples, 98.61%)</title><rect x="10.0" y="212" width="1163.6" height="15.0" fill="rgb(59,173,173)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="222.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_Compiler(char const*, char const*, std::locale const&amp;, std::regex_constants::syntax_option_type)</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__stpncpy_sse2 (1 samples, 1.39%)</title><rect x="321.4" y="548" width="16.4" height="15.0" fill="rgb(62,176,176)" rx="2" ry="2" />
+<text text-anchor="" x="324.39" y="558.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::allocator_traits&lt;std::allocator&lt;char&gt; &gt;::allocate(std::allocator&lt;char&gt;&amp;, unsigned long) (2 samples, 2.78%)</title><rect x="468.9" y="548" width="32.8" height="15.0" fill="rgb(91,203,203)" rx="2" ry="2" />
+<text text-anchor="" x="471.89" y="558.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >st..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="836" width="16.4" height="15.0" fill="rgb(57,172,172)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="846.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_State(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="1157.2" y="340" width="16.4" height="15.0" fill="rgb(101,212,212)" rx="2" ry="2" />
+<text text-anchor="" x="1160.22" y="350.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="900" width="16.4" height="15.0" fill="rgb(82,194,194)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="910.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::_Construct&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;) (1 samples, 1.39%)</title><rect x="1140.8" y="372" width="16.4" height="15.0" fill="rgb(91,202,202)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="382.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>all (72 samples, 100%)</title><rect x="10.0" y="36" width="1180.0" height="15.0" fill="rgb(107,217,217)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="46.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative() (69 samples, 95.83%)</title><rect x="10.0" y="244" width="1130.8" height="15.0" fill="rgb(96,207,207)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="254.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::ctype&lt;char&gt; const&amp; std::use_facet&lt;std::ctype&lt;char&gt; &gt;(std::locale const&amp;) (1 samples, 1.39%)</title><rect x="354.2" y="484" width="16.4" height="15.0" fill="rgb(50,165,165)" rx="2" ry="2" />
+<text text-anchor="" x="357.17" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_try_char() (1 samples, 1.39%)</title><rect x="600.0" y="388" width="16.4" height="15.0" fill="rgb(61,175,175)" rx="2" ry="2" />
+<text text-anchor="" x="603.00" y="398.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;::base() const (1 samples, 1.39%)</title><rect x="157.5" y="500" width="16.4" height="15.0" fill="rgb(85,197,197)" rx="2" ry="2" />
+<text text-anchor="" x="160.50" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_term() (33 samples, 45.83%)</title><rect x="600.0" y="276" width="540.8" height="15.0" fill="rgb(51,166,166)" rx="2" ry="2" />
+<text text-anchor="" x="603.00" y="286.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_term()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;char, std::allocator&lt;char&gt; &gt;::size() const (1 samples, 1.39%)</title><rect x="370.6" y="484" width="16.3" height="15.0" fill="rgb(81,194,194)" rx="2" ry="2" />
+<text text-anchor="" x="373.56" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; std::__cxx11::regex_traits&lt;char&gt;::transform&lt;char*&gt;(char*, char*) const (7 samples, 9.72%)</title><rect x="747.5" y="452" width="114.7" height="15.0" fill="rgb(65,178,178)" rx="2" ry="2" />
+<text text-anchor="" x="750.50" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__cxx11::..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::collate&lt;char&gt;::do_transform(char const*, char const*) const (5 samples, 6.94%)</title><rect x="780.3" y="484" width="81.9" height="15.0" fill="rgb(70,183,183)" rx="2" ry="2" />
+<text text-anchor="" x="783.28" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__cx..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::push_back(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="1108.1" y="404" width="16.3" height="15.0" fill="rgb(82,194,194)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="414.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::allocator&lt;char&gt;::~allocator() (1 samples, 1.39%)</title><rect x="1009.7" y="500" width="16.4" height="15.0" fill="rgb(53,167,167)" rx="2" ry="2" />
+<text text-anchor="" x="1012.72" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>bool std::__detail::__regex_algo_impl&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, char, std::__cxx11::regex_traits&lt;char&gt;, (std::__detail::_RegexExecutorPolicy)0, true&gt;(__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::__cxx11::match_results&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; &gt;&amp;, std::__cxx11::basic_regex&lt;char, std::__cxx11::regex_traits&lt;char&gt; &gt; const&amp;, std::regex_constants::match_flag_type) (1 samples, 1.39%)</title><rect x="1173.6" y="164" width="16.4" height="15.0" fill="rgb(82,194,194)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="174.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::vector&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt; &gt;::emplace_back&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;&amp;&amp;) (2 samples, 2.78%)</title><rect x="1140.8" y="276" width="32.8" height="15.0" fill="rgb(89,201,201)" rx="2" ry="2" />
+<text text-anchor="" x="1143.83" y="286.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >vo..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__dynamic_cast&lt;000000000008bf70&gt; (1 samples, 1.39%)</title><rect x="518.1" y="500" width="16.3" height="15.0" fill="rgb(67,181,181)" rx="2" ry="2" />
+<text text-anchor="" x="521.06" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_atom() (33 samples, 45.83%)</title><rect x="600.0" y="292" width="540.8" height="15.0" fill="rgb(73,186,186)" rx="2" ry="2" />
+<text text-anchor="" x="603.00" y="302.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_atom()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; std::__cxx11::regex_traits&lt;char&gt;::transform_primary&lt;char*&gt;(char*, char*) const (20 samples, 27.78%)</title><rect x="173.9" y="468" width="327.8" height="15.0" fill="rgb(91,202,202)" rx="2" ry="2" />
+<text text-anchor="" x="176.89" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__cxx11::basic_string&lt;char, std::char_t..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>_start&lt;00000000004034f0&gt; (72 samples, 100.00%)</title><rect x="10.0" y="68" width="1180.0" height="15.0" fill="rgb(53,168,168)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="78.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >_start&lt;00000000004034f0&gt;</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_match_token(std::__detail::_ScannerBase::_TokenT) (1 samples, 1.39%)</title><rect x="1124.4" y="324" width="16.4" height="15.0" fill="rgb(59,173,173)" rx="2" ry="2" />
+<text text-anchor="" x="1127.44" y="334.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_rep_once_more(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="356" width="16.4" height="15.0" fill="rgb(83,195,195)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="366.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;std::pair&lt;char, char&gt;, std::allocator&lt;std::pair&lt;char, char&gt; &gt; &gt;::begin() const (1 samples, 1.39%)</title><rect x="550.8" y="468" width="16.4" height="15.0" fill="rgb(96,207,207)" rx="2" ry="2" />
+<text text-anchor="" x="553.83" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::swap&lt;bool (*)(std::_Any_data&amp;, std::_Any_data const&amp;, std::_Manager_operation)&gt;(bool (*&amp;)(std::_Any_data&amp;, std::_Any_data const&amp;, std::_Manager_operation), bool (*&amp;)(std::_Any_data&amp;, std::_Any_data const&amp;, std::_Manager_operation)) (1 samples, 1.39%)</title><rect x="1157.2" y="388" width="16.4" height="15.0" fill="rgb(107,217,217)" rx="2" ry="2" />
+<text text-anchor="" x="1160.22" y="398.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;char, std::allocator&lt;char&gt; &gt;::vector&lt;char*, void&gt;(char*, char*, std::allocator&lt;char&gt; const&amp;) (7 samples, 9.72%)</title><rect x="862.2" y="452" width="114.7" height="15.0" fill="rgb(73,186,186)" rx="2" ry="2" />
+<text text-anchor="" x="865.22" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::vector&lt;ch..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;::difference_type __gnu_cxx::operator-&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; const&amp;, __gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; const&amp;) (1 samples, 1.39%)</title><rect x="632.8" y="484" width="16.4" height="15.0" fill="rgb(76,189,189)" rx="2" ry="2" />
+<text text-anchor="" x="635.78" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::function&lt;bool (char)&gt;::function(std::function&lt;bool (char)&gt;&amp;&amp;) (1 samples, 1.39%)</title><rect x="1157.2" y="356" width="16.4" height="15.0" fill="rgb(65,179,179)" rx="2" ry="2" />
+<text text-anchor="" x="1160.22" y="366.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; &gt;::operator=(std::vector&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; &gt; const&amp;) (1 samples, 1.39%)</title><rect x="1173.6" y="932" width="16.4" height="15.0" fill="rgb(53,168,168)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="942.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_term() (34 samples, 47.22%)</title><rect x="26.4" y="372" width="557.2" height="15.0" fill="rgb(105,215,215)" rx="2" ry="2" />
+<text text-anchor="" x="29.39" y="382.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_term()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::vector&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; &gt;::size() const (1 samples, 1.39%)</title><rect x="1173.6" y="948" width="16.4" height="15.0" fill="rgb(104,214,214)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="958.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="852" width="16.4" height="15.0" fill="rgb(60,174,174)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="862.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_M_dfs(std::__detail::_Executor&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;, std::allocator&lt;std::__cxx11::sub_match&lt;__gnu_cxx::__normal_iterator&lt;char const*, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::regex_traits&lt;char&gt;, true&gt;::_Match_mode, long) (1 samples, 1.39%)</title><rect x="1173.6" y="452" width="16.4" height="15.0" fill="rgb(95,206,206)" rx="2" ry="2" />
+<text text-anchor="" x="1176.61" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::__copy_move_a2&lt;false, char*, char*&gt;(char*, char*, char*) (2 samples, 2.78%)</title><rect x="895.0" y="564" width="32.8" height="15.0" fill="rgb(61,175,175)" rx="2" ry="2" />
+<text text-anchor="" x="898.00" y="574.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >ch..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__GI___strxfrm_l (4 samples, 5.56%)</title><rect x="780.3" y="500" width="65.5" height="15.0" fill="rgb(108,218,218)" rx="2" ry="2" />
+<text text-anchor="" x="783.28" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__GI___..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::function&lt;bool (char)&gt;::swap(std::function&lt;bool (char)&gt;&amp;) (1 samples, 1.39%)</title><rect x="583.6" y="484" width="16.4" height="15.0" fill="rgb(95,206,206)" rx="2" ry="2" />
+<text text-anchor="" x="586.61" y="494.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt; std::find&lt;__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt;(__gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, __gnu_cxx::__normal_iterator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const*, std::vector&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::allocator&lt;std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; const&amp;) (2 samples, 2.78%)</title><rect x="59.2" y="468" width="32.7" height="15.0" fill="rgb(72,185,185)" rx="2" ry="2" />
+<text text-anchor="" x="62.17" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >__..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::_Destroy&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;(std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;*, std::allocator&lt;std::__detail::_State&lt;std::__cxx11::regex_traits&lt;char&gt; &gt; &gt;&amp;) (1 samples, 1.39%)</title><rect x="1108.1" y="452" width="16.3" height="15.0" fill="rgb(95,207,207)" rx="2" ry="2" />
+<text text-anchor="" x="1111.06" y="462.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>char* std::__uninitialized_copy_a&lt;char*, char*, char&gt;(char*, char*, char*, std::allocator&lt;char&gt;&amp;) (2 samples, 2.78%)</title><rect x="895.0" y="500" width="32.8" height="15.0" fill="rgb(76,189,189)" rx="2" ry="2" />
+<text text-anchor="" x="898.00" y="510.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >ch..</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative() (35 samples, 48.61%)</title><rect x="10.0" y="356" width="573.6" height="15.0" fill="rgb(50,165,165)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="366.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >std::__detail::_Compiler&lt;std::__cxx11::regex_traits&lt;char&gt; &gt;::_M_alternative()</text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>void std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::_M_construct&lt;char*&gt;(char*, char*, std::forward_iterator_tag) (1 samples, 1.39%)</title><rect x="747.5" y="516" width="16.4" height="15.0" fill="rgb(107,217,217)" rx="2" ry="2" />
+<text text-anchor="" x="750.50" y="526.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
+<title>__gnu_cxx::__normal_iterator&lt;char const*, std::vector&lt;char, std::allocator&lt;char&gt; &gt; &gt;::base() const (1 samples, 1.39%)</title><rect x="698.3" y="468" width="16.4" height="15.0" fill="rgb(85,197,197)" rx="2" ry="2" />
+<text text-anchor="" x="701.33" y="478.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+</svg>
