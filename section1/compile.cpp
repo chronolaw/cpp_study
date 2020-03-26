@@ -33,7 +33,7 @@ struct fib<1>
     static const int value = 1;
 };
 
-//[[deprecated("deadline:2020-12-31")]]      // c+14 or later
+//[[deprecated("deadline:2020-12-31")]]      // c++14 or later
 [[gnu::deprecated]] // c+11 or later
 int old_func()
 {
