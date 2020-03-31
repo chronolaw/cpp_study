@@ -1,9 +1,9 @@
 // Copyright (c) 2020 by Chrono
 //
-// g++ test04.cpp -Wall -Werror -std=c++11 -o a.out;./a.out
-// g++ test04.cpp -Wall -Werror -std=c++14 -o a.out;./a.out
+// g++ compile.cpp -Wall -Werror -std=c++11 -o a.out;./a.out
+// g++ compile.cpp -Wall -Werror -std=c++14 -o a.out;./a.out
 //
-// g++ test04.cpp -DNDEBUG -std=c++11 -o a.out;./a.out
+// g++ compile.cpp -DNDEBUG -std=c++11 -o a.out;./a.out
 //
 // gcc -E -dM - < /dev/null
 
@@ -33,7 +33,7 @@ struct fib<1>
     static const int value = 1;
 };
 
-//[[deprecated("deadline:2020-12-31")]]      // c+14 or later
+//[[deprecated("deadline:2020-12-31")]]      // c++14 or later
 [[gnu::deprecated]] // c+11 or later
 int old_func()
 {

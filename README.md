@@ -36,15 +36,26 @@ Pull requests of make/cmake are welcome!
 ## Dev Links
 
 * [Boost](https://www.boost.org/)
+* [tbb](https://github.com/intel/tbb)
 * [JSON](https://www.json.org/json-zh.html)
-* [RapidJSON](https://github.com/Tencent/rapidjson)
 * [JSON for Modern C++](https://github.com/nlohmann/json)
 * [MessagePack](https://msgpack.org/)
 * [msgpack-c](https://github.com/msgpack/msgpack-c)
 * [ProtoBuf](https://github.com/protocolbuffers/protobuf)
+* [protobuf-c](https://github.com/protobuf-c/protobuf-c)
+* [gRPC](https://grpc.io)
 * [Thrift](https://thrift.apache.org/)
 * [libcurl](https://curl.haxx.se/libcurl/)
+* [cpr](https://github.com/whoshuu/cpr)
 * [ZMQ](https://zeromq.org/)
+* [pybind11](https://github.com/pybind/pybind11)
+* [lua](https://www.lua.org/)
+* [luajit](http://luajit.org/)
+* [luajit-openresty](https://github.com/openresty/luajit2)
+* [LuaBridge](https://github.com/vinniefalco/LuaBridge)
+* [gperftools](https://github.com/gperftools/gperftools)
+* [FlameGraph](https://github.com/brendangregg/FlameGraph)
+* [OpenResty XRay](https://openresty.com.cn/cn/xray/)
 
 
 * [Awesome C++](https://github.com/fffaraz/awesome-cpp)
@@ -56,6 +67,6 @@ Pull requests of make/cmake are welcome!
 * [professional_boost](https://github.com/chronolaw/professional_boost.git) - Professional boost development
 * [annotated_nginx](https://github.com/chronolaw/annotated_nginx) - 注释nginx，学习研究源码
 * [ngx_cpp_dev](https://github.com/chronolaw/ngx_cpp_dev) - Nginx C++ development kit, with the power of C++11 and Boost Library
-* [ngx_ansic_dev](https://github.com/chronolaw/ngx_ansic_dev) - Nginc ANSI C Development
+* [ngx_ansic_dev](https://github.com/chronolaw/ngx_ansic_dev) - Nginx ANSI C Development
 * [openresty_dev](https://github.com/chronolaw/openresty_dev) - OpenResty/Lua Programming
 * [favorite-nginx](https://github.com/chronolaw/favorite-nginx) - Selected favorite nginx modules and resources

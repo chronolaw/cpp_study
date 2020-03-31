@@ -1,8 +1,8 @@
 // Copyright (c) 2020 by Chrono
 //
-// g++ test11.cpp -std=c++11 -o a.out;./a.out
-// g++ test11.cpp -std=c++14 -o a.out;./a.out
-// g++ test11.cpp -std=c++14 -I../common -o a.out;./a.out
+// g++ string.cpp -std=c++11 -o a.out;./a.out
+// g++ string.cpp -std=c++14 -o a.out;./a.out
+// g++ string.cpp -std=c++14 -I../common -o a.out;./a.out
 
 #include <cassert>
 
