@@ -21,9 +21,6 @@
 #   error "C++ is too old"
 #endif  // __cplusplus >= 201402
 
-static_assert(
-    __GNUC__ >= 4, "GCC is too old");
-
 #if __cplusplus >= 201402
 #   define  CPP_DEPRECATED [[deprecated]]
 #else
@@ -33,6 +30,9 @@ static_assert(
 // macro for convienient namespace
 #define BEGIN_NAMESPACE(x)  namespace x {
 #define END_NAMESPACE(x)    }
+
+static_assert(
+    __GNUC__ >= 4, "GCC is too old");
 
 #endif  //_CPP_LANG_HPP
 

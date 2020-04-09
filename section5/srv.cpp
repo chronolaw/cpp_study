@@ -7,6 +7,7 @@
 //#include <iostream>
 
 #include "cpplang.hpp"
+#include "SalesData.hpp"
 
 int main()
 {
