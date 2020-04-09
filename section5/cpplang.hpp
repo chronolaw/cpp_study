@@ -30,9 +30,10 @@
 // macro for convienient namespace
 #define BEGIN_NAMESPACE(x)  namespace x {
 #define END_NAMESPACE(x)    }
+#define USING_NAMESPACE(x)  using namespace x;
 
-static_assert(
-    __GNUC__ >= 4, "GCC is too old");
+//static_assert(
+//    __GNUC__ >= 4, "GCC is too old");
 
 #endif  //_CPP_LANG_HPP
 

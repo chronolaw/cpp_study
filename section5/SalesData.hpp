@@ -5,6 +5,8 @@
 
 #include "cpplang.hpp"
 
+BEGIN_NAMESPACE(cpp_study)
+
 class SalesData final
 {
 public:
@@ -15,6 +17,8 @@ public:
     using uint_type     = unsigned int;
     using currency_type = double;
 
+    static_assert(
+        sizeof(uint_type) >= 4, "uint is too small");
 public:
     SalesData() = default;
    ~SalesData() = default;
@@ -40,12 +44,14 @@ public:
         return m_revenue;
     }
 
+    CPP_DEPRECATED
     currency_type average() const
     {
         return m_revenue / m_sold;
     }
 };
 
+END_NAMESPACE(cpp_study)
 
 #endif  //_SALES_DATA_HPP
 
