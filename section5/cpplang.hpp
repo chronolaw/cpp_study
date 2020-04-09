@@ -21,11 +21,19 @@
 #   error "C++ is too old"
 #endif  // __cplusplus >= 201402
 
+// [[deprecated]]
 #if __cplusplus >= 201402
 #   define  CPP_DEPRECATED [[deprecated]]
 #else
 #   define  CPP_DEPRECATED [[gnu::deprecated]]
 #endif  // __cplusplus >= 201402
+
+// static_assert
+#if __cpp_static_assert >= 201411
+#   define STATIC_ASSERT(x) static_assert(x)
+#else
+#   define STATIC_ASSERT(x) static_assert(x, "")
+#endif
 
 // macro for convienient namespace
 #define BEGIN_NAMESPACE(x)  namespace x {

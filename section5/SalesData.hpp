@@ -17,8 +17,8 @@ public:
     using uint_type     = unsigned int;
     using currency_type = double;
 
-    static_assert(
-        sizeof(uint_type) >= 4, "uint is too small");
+    STATIC_ASSERT(sizeof(uint_type) >= 4);
+    STATIC_ASSERT(sizeof(currency_type) >= 4);
 public:
     SalesData() = default;
    ~SalesData() = default;
