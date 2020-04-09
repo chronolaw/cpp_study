@@ -1,6 +1,6 @@
 # cpp_study
 
-Follow me to study modern C++
+《C++实践经验谈》(will be released at 4/22/2020) Follow me to study modern C++.
 
 Pull requests of make/cmake are welcome!
 
