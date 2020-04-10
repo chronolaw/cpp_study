@@ -10,16 +10,45 @@ BEGIN_NAMESPACE(cpp_study)
 class SalesData final
 {
 public:
-    using this_type     = SalesData;
+    using this_type = SalesData;
 
 public:
-    using string_type   = std::string;
-    using uint_type     = unsigned int;
-    using currency_type = double;
+    using string_type       = std::string;
+    using string_view_type  = const std::string&;
+    using uint_type         = unsigned int;
+    using currency_type     = double;
 
     STATIC_ASSERT(sizeof(uint_type) >= 4);
     STATIC_ASSERT(sizeof(currency_type) >= 4);
 public:
+    SalesData(string_view_type id, uint_type s, currency_type r) noexcept
+        : m_id(id), m_sold(s), m_revenue(r)
+    {}
+
+    SalesData(string_view_type id) noexcept
+        : SalesData(id, 0, 0)
+    {}
+
+public:
+    SalesData(SalesData&& s) noexcept
+    {
+        m_id = std::move(s.m_id);
+        m_sold = s.m_sold;
+        m_revenue = s.m_revenue;
+    }
+
+    SalesData& operator=(SalesData&& s) noexcept
+    {
+        m_id = std::move(s.m_id);
+        m_sold = s.m_sold;
+        m_revenue = s.m_revenue;
+
+        return *this;
+    }
+
+    SalesData(const SalesData&) = default;
+    SalesData& operator=(const SalesData&) = default;
+
     SalesData() = default;
    ~SalesData() = default;
 
@@ -29,17 +58,17 @@ private:
     uint_type   m_revenue   = 0;
 
 public:
-    const string_type& id() const
+    string_view_type id() const noexcept
     {
         return m_id;
     }
 
-    uint_type sold() const
+    uint_type sold() const noexcept
     {
         return m_sold;
     }
 
-    currency_type revenue() const
+    currency_type revenue() const noexcept
     {
         return m_revenue;
     }

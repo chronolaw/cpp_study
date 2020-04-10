@@ -19,7 +19,7 @@
 // must be C++11 or later
 #if __cplusplus < 201103
 #   error "C++ is too old"
-#endif  // __cplusplus >= 201402
+#endif  // __cplusplus < 201103
 
 // [[deprecated]]
 #if __cplusplus >= 201402
@@ -32,7 +32,7 @@
 #if __cpp_static_assert >= 201411
 #   define STATIC_ASSERT(x) static_assert(x)
 #else
-#   define STATIC_ASSERT(x) static_assert(x, "")
+#   define STATIC_ASSERT(x) static_assert(x, #x)
 #endif
 
 // macro for convienient namespace
