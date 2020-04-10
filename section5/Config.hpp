@@ -35,7 +35,7 @@ public:
 
    ~Config() = default;
 public:
-    void load(string_view_type filename)
+    void load(string_view_type filename) const
     {
         auto status = luaL_dofile(m_vm.get(), filename.c_str());
 
