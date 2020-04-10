@@ -8,7 +8,6 @@
 
 #include "cpplang.hpp"
 #include "SalesData.hpp"
-#include "SpinLock.hpp"
 #include "Zmq.hpp"
 
 // you should put json.hpp in ../common

@@ -1,27 +1,55 @@
 // Copyright (c) 2020 by Chrono
 //
-// g++ srv.cpp -std=c++11 -o a.out;./a.out
-// g++ srv.cpp -std=c++14 -o a.out;./a.out
-// g++ srv.cpp -std=c++14 -I../common -o a.out;./a.out
+// g++ srv.cpp -std=c++14 -I../common -I../common/include -lzmq -lpthread -o a.out;./a.out
+// g++ srv.cpp -std=c++14 -I../common -I../common/include -lzmq -lpthread -g -O0 -o a.out
+// g++ srv.cpp -std=c++14 -I../common -I../common/include -lzmq -lpthread -g -O0 -o a.out;./a.out
 
 //#include <iostream>
 
 #include "cpplang.hpp"
-#include "SalesData.hpp"
-#include "SpinLock.hpp"
+#include "Summary.hpp"
 #include "Zmq.hpp"
+
+// you should put json.hpp in ../common
+#include "json.hpp"
+
+USING_NAMESPACE(std);
+USING_NAMESPACE(cpp_study);
 
 int main()
 {
-    using namespace std;
+    cout << "hello cpp_study server" << endl;
 
-    cout << "c++ version = " << __cplusplus << endl;
+    Summary sum;
 
-    cout << "gcc version = " << __VERSION__ << endl;
+    auto cycle = [&](const auto& addr)
+    {
+        using zmq_ctx = ZmqContext<1>;
 
-    cout << "gcc major = " << __GNUC__ << endl;
-    cout << "gcc minor = " << __GNUC_MINOR__ << endl;
-    cout << "gcc patch = " << __GNUC_PATCHLEVEL__ << endl;
+        auto sock = zmq_ctx::recv_sock();
 
-    cout << "libstdc++ = " << __GLIBCXX__ << endl;
+        sock.bind(addr);
+        assert(sock.connected());
+
+        auto msg_ptr = std::make_shared<zmq_message_type>();
+
+        sock.recv(msg_ptr.get());
+        cout << msg_ptr->size() << endl;
+
+        std::async(
+        [&sum, msg_ptr]()
+        {
+            SalesData data;
+
+            auto obj = msgpack::unpack(
+                        msg_ptr->data<char>(), msg_ptr->size()).get();
+            obj.convert(data);
+
+            sum.add_sales(data);
+        });
+    };
+
+    auto fu = std::async(cycle, "tcp://127.0.0.1:5555");
+
+    fu.wait();
 }
