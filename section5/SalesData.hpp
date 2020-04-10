@@ -31,21 +31,25 @@ public:
     {}
 
 public:
+#if 0
     SalesData(SalesData&& s) noexcept
-    {
-        m_id = std::move(s.m_id);
-        m_sold = s.m_sold;
-        m_revenue = s.m_revenue;
-    }
+        : m_id(std::move(s.m_id)),
+          m_sold(std::move(s.m_sold)),
+          m_revenue(std::move(s.m_revenue))
+    {}
 
     SalesData& operator=(SalesData&& s) noexcept
     {
         m_id = std::move(s.m_id);
-        m_sold = s.m_sold;
-        m_revenue = s.m_revenue;
+        m_sold = std::move(s.m_sold);
+        m_revenue = std::move(s.m_revenue);
 
         return *this;
     }
+#endif
+
+    SalesData(SalesData&& s) = default;
+    SalesData& operator=(SalesData&& s) = default;
 
     SalesData(const SalesData&) = default;
     SalesData& operator=(const SalesData&) = default;
