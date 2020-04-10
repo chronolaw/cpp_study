@@ -7,6 +7,7 @@
 
 BEGIN_NAMESPACE(cpp_study)
 
+// atomic spinlock with TAS
 class SpinLock final
 {
 public:
@@ -43,6 +44,8 @@ private:
     atomic_type m_lock {false};
 };
 
+// RAII for lock
+// you can change it to a template class
 class SpinLockGuard final
 {
 public:
