@@ -1,7 +1,7 @@
 // Copyright (c) 2020 by Chrono
 
-#ifndef _HELLO_HPP
-#define _HELLO_HPP
+#ifndef _CONFIG_HPP
+#define _CONFIG_HPP
 
 #include "cpplang.hpp"
 
@@ -70,5 +70,5 @@ private:
 
 END_NAMESPACE(cpp_study)
 
-#endif  //_HELLO_HPP
+#endif  //_CONFIG_HPP
 
