@@ -1,14 +1,15 @@
 // Copyright (c) 2020 by Chrono
 //
-// g++ srv.cpp -std=c++14 -I../common -I../common/include -lzmq -lpthread -o a.out;./a.out
-// g++ srv.cpp -std=c++14 -I../common -I../common/include -lzmq -lpthread -g -O0 -o a.out
-// g++ srv.cpp -std=c++14 -I../common -I../common/include -lzmq -lpthread -g -O0 -o a.out;./a.out
+// g++ srv.cpp -std=c++14 -I../common -I../common/include -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -lzmq -lpthread -o a.out;./a.out
+// g++ srv.cpp -std=c++14 -I../common -I../common/include -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -lzmq -lpthread -g -O0 -o a.out
+// g++ srv.cpp -std=c++14 -I../common -I../common/include -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -lzmq -lpthread -g -O0 -o a.out;./a.out
 
 //#include <iostream>
 
 #include "cpplang.hpp"
 #include "Summary.hpp"
 #include "Zmq.hpp"
+#include "Config.hpp"
 
 // you should put json.hpp in ../common
 #include "json.hpp"
@@ -38,6 +39,7 @@ int main()
     Summary sum;
     std::atomic_int count {0};
 
+    // todo: try-catch
     auto cycle = [&](const auto& addr)
     {
         using zmq_ctx = ZmqContext<1>;
@@ -59,6 +61,7 @@ int main()
 
             // async process msg
 
+            // todo: try-catch
             std::async(std::launch::async,
             [&sum, &count](decltype(msg_ptr) ptr)
             {
