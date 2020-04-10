@@ -1,8 +1,8 @@
 // Copyright (c) 2020 by Chrono
 //
-// g++ srv.cpp -std=c++14 -I../common -I../common/include -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -lzmq -lpthread -o a.out;./a.out
-// g++ srv.cpp -std=c++14 -I../common -I../common/include -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -lzmq -lpthread -g -O0 -o a.out
-// g++ srv.cpp -std=c++14 -I../common -I../common/include -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -lzmq -lpthread -g -O0 -o a.out;./a.out
+// g++ srv.cpp -std=c++14 -I../common -I../common/include -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -lzmq -lpthread -lcpr -lcurl -o a.out;./a.out
+// g++ srv.cpp -std=c++14 -I../common -I../common/include -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -lzmq -lpthread -lcpr -lcurl -g -O0 -o a.out
+// g++ srv.cpp -std=c++14 -I../common -I../common/include -I/usr/local/include/luajit-2.1 -lluajit-5.1 -ldl -lzmq -lpthread -lcpr -lcurl -g -O0 -o a.out;./a.out
 
 //#include <iostream>
 
@@ -13,6 +13,8 @@
 
 // you should put json.hpp in ../common
 #include "json.hpp"
+
+#include <cpr/cpr.h>
 
 USING_NAMESPACE(std);
 USING_NAMESPACE(cpp_study);
@@ -44,7 +46,7 @@ try
     std::atomic_int count {0};
 
     // todo: try-catch
-    auto cycle = [&](const auto& addr)
+    auto recv_cycle = [&](const auto& addr)
     {
         using zmq_ctx = ZmqContext<1>;
 
@@ -89,7 +91,38 @@ try
         }
     };
 
-    auto fu = std::async(cycle,
+    auto log_cycle = [&]()
+    {
+        auto http_addr = conf.get<string>("config.http_addr");
+        auto time_interval = conf.get<int>("config.time_interval");
+
+        for(;;) {
+            std::this_thread::sleep_for(time_interval * 1s);
+            //cout << "log_cycle" << endl;
+
+            using json_t = nlohmann::json;
+
+            json_t j;
+
+            j["count"] = static_cast<int>(count);
+
+            auto res = cpr::Post(
+                       cpr::Url{http_addr},
+                       cpr::Body{j.dump()},
+                       cpr::Timeout{200ms}
+            );
+
+            if (res.status_code != 200) {
+                cout << "http post failed" << endl;
+            }
+        }
+    };
+
+    // launch log_cycle
+    std::async(std::launch::async, log_cycle);
+
+    // launch recv_cycle then wait
+    auto fu = std::async(recv_cycle,
                 conf.get<string>("config.zmq_ipc_addr"));
 
     fu.wait();

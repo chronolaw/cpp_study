@@ -45,7 +45,7 @@ public:
     }
 
     template<typename T>
-    T get(string_view_type key)
+    T get(string_view_type key) const
     {
         if (!std::regex_match(key, m_what, m_reg)) {
             throw std::runtime_error("config key error");
@@ -64,8 +64,8 @@ public:
 private:
     vm_type     m_vm {luaL_newstate(), lua_close};
 
-    regex_type  m_reg {R"(^(\w+)\.(\w+)$)"};
-    match_type  m_what;
+    regex_type          m_reg {R"(^(\w+)\.(\w+)$)"};
+    mutable match_type  m_what;
 };
 
 END_NAMESPACE(cpp_study)
