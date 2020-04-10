@@ -59,6 +59,16 @@ private:
     uint_type   m_revenue   = 0;
 
 public:
+    void inc_sold(uint_type s) noexcept
+    {
+        m_sold += s;
+    }
+
+    void inc_revenue(currency_type r) noexcept
+    {
+        m_revenue += r;
+    }
+public:
     string_view_type id() const noexcept
     {
         return m_id;

@@ -9,6 +9,7 @@
 #include "cpplang.hpp"
 #include "SalesData.hpp"
 #include "SpinLock.hpp"
+#include "Zmq.hpp"
 
 int main()
 {
