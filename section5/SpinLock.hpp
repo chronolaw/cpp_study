@@ -13,6 +13,12 @@ public:
     using atomic_type = std::atomic_flag;
 
 public:
+    SpinLock() = default;
+   ~SpinLock() = default;
+
+    SpinLock(const SpinLock&) = delete;
+    SpinLock& operator=(const SpinLock&) = delete;
+public:
     void lock() noexcept
     {
         for(;;) {

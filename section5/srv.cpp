@@ -118,12 +118,13 @@ try
         }
     };
 
+    // launch recv_cycle then wait
+    auto fu = std::async(std::launch::async,
+                recv_cycle,
+                conf.get<string>("config.zmq_ipc_addr"));
+
     // launch log_cycle
     std::async(std::launch::async, log_cycle);
-
-    // launch recv_cycle then wait
-    auto fu = std::async(recv_cycle,
-                conf.get<string>("config.zmq_ipc_addr"));
 
     fu.wait();
 }

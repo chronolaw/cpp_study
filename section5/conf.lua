@@ -18,7 +18,7 @@ config = {
 
     best_n  = 3,
 
-    time_interval = 1,  -- seconds
+    time_interval = 5,  -- seconds
 
 }
 
