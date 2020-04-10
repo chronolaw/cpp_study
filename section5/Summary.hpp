@@ -51,7 +51,7 @@ public:
             std::begin(m_sales), std::end(m_sales),
             [](const auto& a, const auto& b)
             {
-                return a.second.revenue() < b.second.revenue();
+                return a.second.sold() < b.second.sold();
             });
 
         // min max

@@ -54,14 +54,14 @@ public:
     }
 #endif
 
-    SalesData(SalesData&& s) = default;
-    SalesData& operator=(SalesData&& s) = default;
+    SalesData() = default;
+   ~SalesData() = default;
 
     SalesData(const SalesData&) = default;
     SalesData& operator=(const SalesData&) = default;
 
-    SalesData() = default;
-   ~SalesData() = default;
+    SalesData(SalesData&& s) = default;
+    SalesData& operator=(SalesData&& s) = default;
 
 private:
     string_type m_id        = "";
