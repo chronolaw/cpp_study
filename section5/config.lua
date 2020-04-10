@@ -1,9 +1,14 @@
 -- copyright (c) 2020 chrono
 
--- it is more flexible than json
+-- lua is more flexible than json
+
 config = {
 
     max_buf_size = 4 * 1024,
+
+    zmq_ipc_addr = "tcp://127.0.0.1:5555",
+
+    http_addr = "http://localhost/cpp_study?token=cpp@2020",
 
     keyword = "super",
 

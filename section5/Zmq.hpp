@@ -1,10 +1,11 @@
 // Copyright (c) 2020 by Chrono
 
-#ifndef _SPIN_LOCK_HPP
-#define _SPIN_LOCK_HPP
+#ifndef _ZMQ_HPP
+#define _ZMQ_HPP
 
 #include "cpplang.hpp"
 
+// /usr/include/zmq.hpp
 #include <zmq.hpp>
 
 BEGIN_NAMESPACE(cpp_study)
@@ -30,13 +31,20 @@ public:
         return ctx;
     }
 public:
-    zmq_socket_type socket(int mode, size_t hwm = 1000) const
+    zmq_socket_type recv_sock(size_t hwm = 1000) const
     {
-        zmq_socket_type sock(context(), mode);
+        zmq_socket_type sock(context(), ZMQ_PULL);
 
-        sock.setsockopt(
-            mode == ZMQ_PULL ? ZMQ_RCVHWM : ZMQ_SNDHWM,
-            hwm);
+        sock.setsockopt(ZMQ_RCVHWM, hwm);
+
+        return sock;
+    }
+
+    zmq_socket_type send_sock(size_t hwm = 1000) const
+    {
+        zmq_socket_type sock(context(), ZMQ_PUSH);
+
+        sock.setsockopt(ZMQ_SNDHWM, hwm);
 
         return sock;
     }
@@ -44,5 +52,5 @@ public:
 
 END_NAMESPACE(cpp_study)
 
-#endif  //_SPIN_LOCK_HPP
+#endif  //_ZMQ_HPP
 
