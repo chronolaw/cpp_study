@@ -79,6 +79,13 @@ public:
         return sbuf;
     }
 
+    SalesData(const msgpack::sbuffer& sbuf)
+    {
+        auto obj = msgpack::unpack(
+                    sbuf.data(), sbuf.size()).get();
+        obj.convert(*this);
+    }
+
 public:
     void inc_sold(uint_type s) noexcept
     {

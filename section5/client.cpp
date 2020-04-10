@@ -14,6 +14,9 @@
 // you should put json.hpp in ../common
 #include "json.hpp"
 
+USING_NAMESPACE(std);
+USING_NAMESPACE(cpp_study);
+
 static
 auto debug_print = [](auto& b)
 {
@@ -29,39 +32,60 @@ auto debug_print = [](auto& b)
     std::cout << j.dump(2) << std::endl;
 };
 
-int main()
-try
+// sales data
+static
+auto make_sales = [=](const auto& id, auto s, auto r)
+//-> msgpack::sbuffer
 {
-    USING_NAMESPACE(std);
-    USING_NAMESPACE(cpp_study);
+    return SalesData(id, s, r).pack();
 
-    cout << "hello cpp_study" << endl;
+#if 0
+    SalesData book(id);
 
-    // sales data
+    book.inc_sold(s);
+    book.inc_revenue(r);
 
-    SalesData book1("isbn001");
+    debug_print(book);
 
-    book1.inc_sold(10);
-    book1.inc_revenue(100);
-
-    debug_print(book1);
-
-    auto buf = book1.pack();
+    auto buf = book.pack();
     cout << buf.size() << endl;
 
-    // zmq send
+    //SalesData book2 {buf};
+    //assert(book.id() == book2.id());
+    //debug_print(book2);
 
+    return buf;
+#endif
+};
+
+// zmq send
+static
+auto send_sales = [](const auto& addr, const auto& buf)
+{
     using zmq_ctx = ZmqContext<1>;
 
     auto sock = zmq_ctx::send_sock();
 
-    sock.connect("tcp://127.0.0.1:5555");
+    sock.connect(addr);
     assert(sock.connected());
 
     auto len = sock.send(buf.data(), buf.size());
     assert(len == buf.size());
 
     cout << "send len = " << len << endl;
+};
+
+int main()
+try
+{
+    cout << "hello cpp_study client" << endl;
+
+    //auto buf = make_sales("001", 10, 100);
+    //send_sales("tcp://127.0.0.1:5555", buf);
+
+    send_sales("tcp://127.0.0.1:5555",
+             make_sales("001", 10, 100));
+
 }
 catch(std::exception& e)
 {
