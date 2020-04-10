@@ -31,20 +31,24 @@ public:
         return ctx;
     }
 public:
-    zmq_socket_type recv_sock(size_t hwm = 1000) const
+    static
+    zmq_socket_type recv_sock(int hwm = 1000)
     {
         zmq_socket_type sock(context(), ZMQ_PULL);
 
         sock.setsockopt(ZMQ_RCVHWM, hwm);
+        sock.setsockopt(ZMQ_LINGER, 10);    // wait for 10ms
 
         return sock;
     }
 
-    zmq_socket_type send_sock(size_t hwm = 1000) const
+    static
+    zmq_socket_type send_sock(int hwm = 1000)
     {
         zmq_socket_type sock(context(), ZMQ_PUSH);
 
         sock.setsockopt(ZMQ_SNDHWM, hwm);
+        sock.setsockopt(ZMQ_LINGER, 10);    // wait for 10ms
 
         return sock;
     }

@@ -5,6 +5,12 @@
 
 #include "cpplang.hpp"
 
+#include <msgpack.hpp>
+
+#if MSGPACK_VERSION_MAJOR < 2
+#   error "msgpack  is too old"
+#endif
+
 BEGIN_NAMESPACE(cpp_study)
 
 // demo oop in C++
@@ -61,6 +67,17 @@ private:
     string_type m_id        = "";
     uint_type   m_sold      = 0;
     uint_type   m_revenue   = 0;
+
+public:
+    MSGPACK_DEFINE(m_id, m_sold, m_revenue);
+
+    msgpack::sbuffer pack() const
+    {
+        msgpack::sbuffer sbuf;
+        msgpack::pack(sbuf, *this);
+
+        return sbuf;
+    }
 
 public:
     void inc_sold(uint_type s) noexcept
