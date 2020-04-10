@@ -33,6 +33,7 @@ auto debug_print = [](auto& b)
 };
 
 int main()
+try
 {
     cout << "hello cpp_study server" << endl;
 
@@ -85,7 +86,16 @@ int main()
         }
     };
 
-    auto fu = std::async(cycle, "tcp://127.0.0.1:5555");
+    Config conf;
+    conf.load("./conf.lua");
+
+    string listen_addr = conf.get("config.zmq_ipc_addr");
+
+    auto fu = std::async(cycle, listen_addr);
 
     fu.wait();
+}
+catch(std::exception& e)
+{
+    std::cerr << e.what() << std::endl;
 }

@@ -21,3 +21,7 @@ config = {
     time_interval = 1,
 
 }
+
+-- debug: luajit conf.lua
+
+--print(config.http_addr)
