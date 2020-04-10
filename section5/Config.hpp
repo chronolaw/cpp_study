@@ -44,22 +44,27 @@ public:
         }
     }
 
-    value_type get(string_view_type key)
+    template<typename T>
+    T get(string_view_type key)
     {
-        if (!std::regex_match(key, m_what, m_conf_reg)) {
+        if (!std::regex_match(key, m_what, m_reg)) {
             throw std::runtime_error("config key error");
         }
 
         auto w1 = m_what[1].str();
         auto w2 = m_what[2].str();
 
-        return luabridge::getGlobal(
-                    m_vm.get(), w1.c_str())[w2];
+        using namespace luabridge;
+
+        auto v = getGlobal(
+                    m_vm.get(), w1.c_str());
+
+        return LuaRef_cast<T>(v[w2]);
     }
 private:
     vm_type     m_vm {luaL_newstate(), lua_close};
 
-    regex_type  m_conf_reg {R"(^(\w+)\.(\w+)$)"};
+    regex_type  m_reg {R"(^(\w+)\.(\w+)$)"};
     match_type  m_what;
 };
 

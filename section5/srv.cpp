@@ -37,6 +37,9 @@ try
 {
     cout << "hello cpp_study server" << endl;
 
+    Config conf;
+    conf.load("./conf.lua");
+
     Summary sum;
     std::atomic_int count {0};
 
@@ -86,12 +89,8 @@ try
         }
     };
 
-    Config conf;
-    conf.load("./conf.lua");
-
-    string listen_addr = conf.get("config.zmq_ipc_addr");
-
-    auto fu = std::async(cycle, listen_addr);
+    auto fu = std::async(cycle,
+                conf.get<string>("config.zmq_ipc_addr"));
 
     fu.wait();
 }
