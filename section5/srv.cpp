@@ -59,7 +59,7 @@ try
 
         for(;;) {
 
-            // shared_ptr/unique_ptr
+            // xxx : shared_ptr/unique_ptr
             auto msg_ptr = std::make_shared<zmq_message_type>();
 
             sock.recv(msg_ptr.get());
@@ -75,6 +75,7 @@ try
 
                 SalesData book;
 
+                // xxx: json/msgpack/protobuf
                 auto obj = msgpack::unpack(
                             ptr->data<char>(), ptr->size()).get();
                 obj.convert(book);
@@ -87,9 +88,9 @@ try
                 ++count;
                 cout << count << endl;
             },
-            msg_ptr);
-        }
-    };
+            msg_ptr);   // async
+        }   // for(;;)
+    };  // recv_cycle lambda
 
     auto log_cycle = [&]()
     {
@@ -115,8 +116,8 @@ try
             if (res.status_code != 200) {
                 cout << "http post failed" << endl;
             }
-        }
-    };
+        }   // for(;;)
+    };  // log_cycle lambda
 
     // launch recv_cycle then wait
     auto fu = std::async(std::launch::async,
