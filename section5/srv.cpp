@@ -16,37 +16,70 @@
 USING_NAMESPACE(std);
 USING_NAMESPACE(cpp_study);
 
+static
+auto debug_print = [](auto& b)
+{
+    using json_t = nlohmann::json;
+
+    json_t j;
+
+    j["id"] = b.id();
+    j["sold"] = b.sold();
+    j["revenue"] = b.revenue();
+    //j["average"] = b.average();
+
+    std::cout << j.dump(2) << std::endl;
+};
+
 int main()
 {
     cout << "hello cpp_study server" << endl;
 
     Summary sum;
+    std::atomic_int count {0};
 
     auto cycle = [&](const auto& addr)
     {
         using zmq_ctx = ZmqContext<1>;
+
+        // zmq recv
 
         auto sock = zmq_ctx::recv_sock();
 
         sock.bind(addr);
         assert(sock.connected());
 
-        auto msg_ptr = std::make_shared<zmq_message_type>();
+        for(;;) {
 
-        sock.recv(msg_ptr.get());
-        cout << msg_ptr->size() << endl;
+            // shared_ptr/unique_ptr
+            auto msg_ptr = std::make_shared<zmq_message_type>();
 
-        std::async(
-        [&sum, msg_ptr]()
-        {
-            SalesData data;
+            sock.recv(msg_ptr.get());
+            //cout << msg_ptr->size() << endl;
 
-            auto obj = msgpack::unpack(
-                        msg_ptr->data<char>(), msg_ptr->size()).get();
-            obj.convert(data);
+            // async process msg
 
-            sum.add_sales(data);
-        });
+            std::async(std::launch::async,
+            [&sum, &count](decltype(msg_ptr) ptr)
+            {
+                //cout << ptr.unique() << endl;
+
+                SalesData book;
+
+                auto obj = msgpack::unpack(
+                            ptr->data<char>(), ptr->size()).get();
+                obj.convert(book);
+
+                //cout << book.id() << endl;
+                //debug_print(book);
+
+                sum.add_sales(book);
+
+                ++count;
+                cout << count << endl;
+            },
+            msg_ptr);
+        }
     };
 
     auto fu = std::async(cycle, "tcp://127.0.0.1:5555");
