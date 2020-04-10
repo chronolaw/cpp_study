@@ -7,6 +7,7 @@
 
 BEGIN_NAMESPACE(cpp_study)
 
+// demo oop in C++
 class SalesData final
 {
 public:

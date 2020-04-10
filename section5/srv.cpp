@@ -8,6 +8,7 @@
 
 #include "cpplang.hpp"
 #include "SalesData.hpp"
+#include "SpinLock.hpp"
 
 int main()
 {
