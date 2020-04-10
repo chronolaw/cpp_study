@@ -14,6 +14,7 @@
 // you should put json.hpp in ../common
 #include "json.hpp"
 
+#include <cstdio>
 #include <cpr/cpr.h>
 
 USING_NAMESPACE(std);
@@ -46,7 +47,7 @@ try
     std::atomic_int count {0};
 
     // todo: try-catch
-    auto recv_cycle = [&](const auto& addr)
+    auto recv_cycle = [&]()
     {
         using zmq_ctx = ZmqContext<1>;
 
@@ -54,7 +55,7 @@ try
 
         auto sock = zmq_ctx::recv_sock();
 
-        sock.bind(addr);
+        sock.bind(conf.get<string>("config.zmq_ipc_addr"));
         assert(sock.connected());
 
         for(;;) {
@@ -64,6 +65,10 @@ try
 
             sock.recv(msg_ptr.get());
             //cout << msg_ptr->size() << endl;
+
+            ++count;
+            cout << count << endl;
+            //printf("count = %d\n", static_cast<int>(count));
 
             // async process msg
 
@@ -84,9 +89,6 @@ try
                 //debug_print(book);
 
                 sum.add_sales(book);
-
-                ++count;
-                cout << count << endl;
             },
             msg_ptr);   // async
         }   // for(;;)
@@ -114,15 +116,14 @@ try
             );
 
             if (res.status_code != 200) {
-                cout << "http post failed" << endl;
+                cerr << "http post failed" << endl;
+                //printf("http post failed\n");
             }
         }   // for(;;)
     };  // log_cycle lambda
 
     // launch recv_cycle then wait
-    auto fu = std::async(std::launch::async,
-                recv_cycle,
-                conf.get<string>("config.zmq_ipc_addr"));
+    auto fu = std::async(std::launch::async, recv_cycle);
 
     // launch log_cycle
     std::async(std::launch::async, log_cycle);
