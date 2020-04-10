@@ -21,6 +21,7 @@ public:
     using string_type       = std::string;
     using map_type          =
             std::map<string_type, sales_type>;
+            //std::unordered_map<string_type, sales_type>;
 public:
     Summary() = default;
    ~Summary() = default;
