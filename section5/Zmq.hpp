@@ -24,6 +24,9 @@ public:
     using zmq_message_type  = zmq::message_t;
 #endif
 public:
+    ZmqContext() = default;
+   ~ZmqContext() = default;
+public:
     static
     zmq_context_type& context()
     {

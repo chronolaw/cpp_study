@@ -11,14 +11,15 @@ BEGIN_NAMESPACE(cpp_study)
 class SpinLock final
 {
 public:
+    using this_type   = SpinLock;
     using atomic_type = std::atomic_flag;
 
 public:
     SpinLock() = default;
    ~SpinLock() = default;
 
-    SpinLock(const SpinLock&) = delete;
-    SpinLock& operator=(const SpinLock&) = delete;
+    SpinLock(const this_type&) = delete;
+    SpinLock& operator=(const this_type&) = delete;
 public:
     void lock() noexcept
     {
@@ -49,6 +50,7 @@ private:
 class SpinLockGuard final
 {
 public:
+    using this_type      = SpinLockGuard;
     using spin_lock_type = SpinLock;
 public:
     SpinLockGuard(spin_lock_type& lock) noexcept
@@ -63,8 +65,8 @@ public:
    }
 
 public:
-    SpinLockGuard(const SpinLockGuard&) = delete;
-    SpinLockGuard& operator=(const SpinLockGuard&) = delete;
+    SpinLockGuard(const this_type&) = delete;
+    SpinLockGuard& operator=(const this_type&) = delete;
 private:
     spin_lock_type& m_lock;
 };

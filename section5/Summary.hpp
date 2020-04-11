@@ -28,8 +28,8 @@ public:
     Summary() = default;
    ~Summary() = default;
 
-    Summary(const Summary&) = delete;
-    Summary& operator=(const Summary&) = delete;
+    Summary(const this_type&) = delete;
+    Summary& operator=(const this_type&) = delete;
 private:
     mutable lock_type   m_lock;
     map_type            m_sales;

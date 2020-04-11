@@ -57,11 +57,11 @@ public:
     SalesData() = default;
    ~SalesData() = default;
 
-    SalesData(const SalesData&) = default;
-    SalesData& operator=(const SalesData&) = default;
+    SalesData(const this_type&) = default;
+    SalesData& operator=(const this_type&) = default;
 
-    SalesData(SalesData&& s) = default;
-    SalesData& operator=(SalesData&& s) = default;
+    SalesData(this_type&& s) = default;
+    SalesData& operator=(this_type&& s) = default;
 
 private:
     string_type m_id        = "";
