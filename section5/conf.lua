@@ -22,6 +22,11 @@ config = {
 
 }
 
+-- more config
+others = {
+    -- add more
+}
+
 -- debug: luajit conf.lua
 
 --print(config.http_addr)
