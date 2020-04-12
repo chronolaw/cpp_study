@@ -64,6 +64,8 @@ Pull requests of make/cmake are welcome!
 
 ## See Also
 
+* [透视HTTP协议](https://time.geekbang.org/column/intro/189)
+* [http_study](https://github.com/chronolaw/http_study) - http service for pratice and more
 * [boost guide](https://github.com/chronolaw/boost_guide.git) - Sample code for Boost library Guide
 * [professional_boost](https://github.com/chronolaw/professional_boost.git) - Professional boost development
 * [annotated_nginx](https://github.com/chronolaw/annotated_nginx) - 注释nginx，学习研究源码
