@@ -1,10 +1,13 @@
 -- copyright (c) 2020 chrono
 
 -- lua is more flexible than json
+-- you can use comment/expression
+-- and more lua pragram
 
 config = {
 
-    -- should be same as cliet
+    -- should be same as client
+    -- you could change it to ipc
     zmq_ipc_addr = "tcp://127.0.0.1:5555",
 
     -- see http_study's lua code
