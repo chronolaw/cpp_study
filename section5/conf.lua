@@ -4,11 +4,13 @@
 
 config = {
 
-    max_buf_size = 4 * 1024,
-
+    -- should be same as cliet
     zmq_ipc_addr = "tcp://127.0.0.1:5555",
 
+    -- see http_study's lua code
     http_addr = "http://localhost/cpp_study?token=cpp@2020",
+
+    time_interval = 5,  -- seconds
 
     keyword = "super",
 
@@ -18,7 +20,7 @@ config = {
 
     best_n  = 3,
 
-    time_interval = 5,  -- seconds
+    max_buf_size = 4 * 1024,
 
 }
 
