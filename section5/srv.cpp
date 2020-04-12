@@ -103,11 +103,15 @@ try
             std::this_thread::sleep_for(time_interval * 1s);
             //cout << "log_cycle" << endl;
 
+            //auto info = sum.minmax_sales();
+            //cout << "log_cycle get info" << endl;
+
             using json_t = nlohmann::json;
 
             json_t j;
 
             j["count"] = static_cast<int>(count);
+            j["minmax"] = sum.minmax_sales();//{info.first, info.second};
 
             auto res = cpr::Post(
                        cpr::Url{http_addr},

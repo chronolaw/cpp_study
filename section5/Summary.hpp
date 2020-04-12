@@ -38,13 +38,26 @@ public:
     {
         lock_guard_type guard(m_lock);
 
-        m_sales[s.id()].inc_sold(s.sold());
-        m_sales[s.id()].inc_revenue(s.revenue());
+        const auto& id = s.id();
+
+        // not found
+        if (m_sales.find(id) == m_sales.end()) {
+            m_sales[id] = s;
+            return;
+        }
+
+        // found
+        m_sales[id].inc_sold(s.sold());
+        m_sales[id].inc_revenue(s.revenue());
     }
 
     minmax_sales_type minmax_sales() const
     {
         lock_guard_type guard(m_lock);
+
+        if (m_sales.empty()) {
+            return minmax_sales_type();
+        }
 
         // algorithm
         auto ret = std::minmax_element(
