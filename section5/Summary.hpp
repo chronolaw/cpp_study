@@ -47,6 +47,7 @@ public:
         }
 
         // found
+        // you could use iter to optimize it
         m_sales[id].inc_sold(s.sold());
         m_sales[id].inc_revenue(s.revenue());
     }
