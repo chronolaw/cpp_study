@@ -85,6 +85,11 @@ try
     send_sales("tcp://127.0.0.1:5555",
              make_sales("001", 10, 100));
 
+    std::this_thread::sleep_for(100ms);
+
+    send_sales("tcp://127.0.0.1:5555",
+             make_sales("002", 20, 200));
+
 }
 catch(std::exception& e)
 {
