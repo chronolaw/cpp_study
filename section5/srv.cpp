@@ -74,7 +74,8 @@ try
 
             // todo: try-catch
             std::async(std::launch::async,
-            [&sum, &count](decltype(msg_ptr) ptr)
+            [&sum, &count, &msg_ptr]()
+            //[&sum, &count](decltype(msg_ptr) ptr)
             {
                 //cout << ptr.unique() << endl;
 
@@ -82,15 +83,14 @@ try
 
                 // xxx: json/msgpack/protobuf
                 auto obj = msgpack::unpack(
-                            ptr->data<char>(), ptr->size()).get();
+                            msg_ptr->data<char>(), msg_ptr->size()).get();
                 obj.convert(book);
 
                 //cout << book.id() << endl;
                 //debug_print(book);
 
                 sum.add_sales(book);
-            },
-            msg_ptr);   // async
+            });   // async
         }   // for(;;)
     };  // recv_cycle lambda
 
