@@ -64,7 +64,7 @@ public:
 private:
     vm_type     m_vm {luaL_newstate(), lua_close};
 
-    regex_type          m_reg {R"(^(\w+)\.(\w+)$)"};
+    const regex_type    m_reg {R"(^(\w+)\.(\w+)$)"};
     mutable match_type  m_what;
 };
 
