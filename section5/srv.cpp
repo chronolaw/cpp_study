@@ -74,7 +74,7 @@ try
 
             // todo: try-catch
             std::async(std::launch::async,
-            [&sum, &count, msg_ptr]()
+            [&sum, msg_ptr]()
             //[&sum, &count](decltype(msg_ptr) ptr)
             {
                 //cout << ptr.unique() << endl;
