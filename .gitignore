@@ -35,3 +35,4 @@
 a.out
 *.swp
 *.pb.*
+example_*_cpp*
