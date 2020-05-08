@@ -122,6 +122,8 @@ int main()
     case2();
 
     my_own::case3();
+
+    [[gnu::unused]] // ignore warning
     my_own::MyClass obj;
 
     case4();
