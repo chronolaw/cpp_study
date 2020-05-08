@@ -22,10 +22,10 @@ int main()
 
     cout << "libstdc++ = " << __GLIBCXX__ << endl;
     /**
-     *
+     * 错误发生在 mac os X 上， 使用工具为 CLion ,错误详情
      error: use of undeclared identifier '__GLIBCXX__'
     cout << "libstdc++ = " << __GLIBCXX__ << endl;
-                              ^
-1 error generated.
+                             ^
+    1 error generated.
      * */
 }
