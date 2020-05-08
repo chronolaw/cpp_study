@@ -21,4 +21,11 @@ int main()
     cout << "gcc patch = " << __GNUC_PATCHLEVEL__ << endl;
 
     cout << "libstdc++ = " << __GLIBCXX__ << endl;
+    /**
+     *
+     error: use of undeclared identifier '__GLIBCXX__'
+    cout << "libstdc++ = " << __GLIBCXX__ << endl;
+                              ^
+1 error generated.
+     * */
 }
