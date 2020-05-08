@@ -1,4 +1,4 @@
-sub_dirs=$(wildcard section[0-3])
+sub_dirs=$(wildcard section[0-4])
 
 sub_builds=$(addprefix build_,$(sub_dirs))
 sub_cleans=$(addprefix clean_,$(sub_dirs))

@@ -18,7 +18,7 @@ const auto thread_num = 1;
 
 zmq::context_t context(thread_num);
 
-auto make_sock = [&](auto mode)
+auto make_sock = [](auto mode)
 {
     return zmq::socket_t(context, mode);
 };
