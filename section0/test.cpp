@@ -19,13 +19,9 @@ int main()
     cout << "gcc major = " << __GNUC__ << endl;
     cout << "gcc minor = " << __GNUC_MINOR__ << endl;
     cout << "gcc patch = " << __GNUC_PATCHLEVEL__ << endl;
-
+    #ifdef __GLIBCXX__
     cout << "libstdc++ = " << __GLIBCXX__ << endl;
-    /**
-     * 错误发生在 mac os X 上， 使用工具为 CLion ,错误详情
-     error: use of undeclared identifier '__GLIBCXX__'
-    cout << "libstdc++ = " << __GLIBCXX__ << endl;
-                             ^
-    1 error generated.
-     * */
+    #else
+    cout << "libstdc++ = " << "unkown version,please check or config your gcc path,or your OS not surpport." << endl;
+    #endif
 }

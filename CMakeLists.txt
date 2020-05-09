@@ -3,11 +3,10 @@ project(cpp_study)
 set(CMAKE_CXX_STANDARD 14)
 
 include_directories("${PROJECT_BINARY_DIR}")
-set(SOURCE_FILES  tutorial.cpp tutorial.h)
-
-add_executable(cpp_study ${SOURCE_FILES} tutorial.cpp tutorial.h)
-target_link_libraries(cpp_study ${EXTRA_LIBS})
 
 include_directories("${PROJECT_SOURCE_DIR}/section0")
+include_directories("${PROJECT_SOURCE_DIR}/section1")
 add_subdirectory(section0)
+add_subdirectory(section1)
 set(EXTRA_LIBS ${EXTRA_LIBS} section0)
+set(EXTRA_LIBS ${EXTRA_LIBS} section1)
