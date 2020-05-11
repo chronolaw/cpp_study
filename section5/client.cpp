@@ -33,7 +33,7 @@ auto debug_print = [](auto& b)
 
 // sales data
 static
-auto make_sales = [=](const auto& id, auto s, auto r)
+auto make_sales = [](const auto& id, auto s, auto r)
 //-> msgpack::sbuffer
 {
     return SalesData(id, s, r).pack();
