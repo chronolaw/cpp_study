@@ -126,13 +126,13 @@ try
         }   // for(;;)
     };  // log_cycle lambda
 
-    // launch recv_cycle then wait
-    auto fu = std::async(std::launch::async, recv_cycle);
-
     // launch log_cycle
-    std::async(std::launch::async, log_cycle);
+    auto fu1 = std::async(std::launch::async, log_cycle);
 
-    fu.wait();
+    // launch recv_cycle then wait
+    auto fu2 = std::async(std::launch::async, recv_cycle);
+
+    fu2.wait();
 }
 catch(std::exception& e)
 {
