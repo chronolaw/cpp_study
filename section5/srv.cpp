@@ -73,7 +73,8 @@ try
             // async process msg
 
             // todo: try-catch
-            std::async(std::launch::async,
+            //auto f = std::async(std::launch::async,
+            std::thread(
             [&sum, msg_ptr]()
             //[&sum, &count](decltype(msg_ptr) ptr)
             {
@@ -90,7 +91,7 @@ try
                 //debug_print(book);
 
                 sum.add_sales(book);
-            });   // async
+            }).detach();   // async
         }   // for(;;)
     };  // recv_cycle lambda
 
