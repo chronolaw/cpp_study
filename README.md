@@ -1,6 +1,6 @@
 # cpp_study
 
-《C++实践经验谈》(delayed to May) Follow me to study modern C++.
+[《C++实战笔记》](https://time.geekbang.org/column/intro/309) Follow me to study modern C++.
 
 Pull requests of make/cmake are welcome!
 
