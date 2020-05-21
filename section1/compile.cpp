@@ -33,6 +33,22 @@ struct fib<1>
     static const int value = 1;
 };
 
+#if __cplusplus >= 201402
+constexpr int const_fib(int n)
+{
+    if (n <= 1) {
+        return 1;
+    }
+
+    return const_fib(n - 1) + const_fib(n - 2);
+}
+#else   // C++11
+int const_fib(int n)
+{
+    return 42;
+}
+#endif
+
 //[[deprecated("deadline:2020-12-31")]]      // c++14 or later
 [[gnu::deprecated]] // c+11 or later
 int old_func()
@@ -115,6 +131,8 @@ int main()
     cout << fib<3>::value << endl;
     cout << fib<4>::value << endl;
     cout << fib<5>::value << endl;
+
+    cout << const_fib(10) << endl;
 
     old_func();
     get_num();
