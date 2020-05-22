@@ -1,0 +1,25 @@
+// Copyright (c) 2020 by Chrono
+//
+// protoc --cpp_out=. sample_v3.proto
+
+syntax = "proto3";
+
+package sample;
+
+message Vendor
+{
+    uint32     id      = 1;
+    string     name    = 2;
+    bool       valid   = 3;
+    string     tel     = 4;
+}
+
+message Product
+{
+    int32      id      = 1;
+    string     name    = 2;
+
+    string     tag     = 3;
+
+    Vendor     vendor  = 10;
+}
