@@ -1,0 +1,15 @@
+add_executable(cpr cpr.cpp)
+add_executable(curl curl.cpp)
+add_executable(gperf gperf.cpp)
+add_executable(json json.cpp)
+add_executable(lua_shared lua_shared.cpp)
+add_executable(luajit luajit.cpp)
+add_executable(msgpack msgpack.cpp)
+add_executable(protobuf protobuf.cpp)
+add_executable(pybind pybind.cpp)
+add_executable(zmq zmq.cpp)
+
+add_library(section4 cpr.cpp curl.cpp demo.py embedded.lua flame.svg gperf.cpp icicle.svg json.cpp lua_shared.cpp luajit.cpp msgpack.cpp protobuf.cpp pybind.cpp sample.proto setup.sh shared.lua zmq.cpp json.hpp sample_v3.proto)
+
+install (TARGETS section4 DESTINATION bin)
+install (FILES cpr.cpp curl.cpp demo.py embedded.lua flame.svg gperf.cpp icicle.svg json.cpp lua_shared.cpp luajit.cpp msgpack.cpp protobuf.cpp pybind.cpp sample.proto setup.sh shared.lua zmq.cpp json.hpp sample_v3.proto DESTINATION include)
