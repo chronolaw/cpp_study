@@ -73,7 +73,8 @@ try
             // async process msg
 
             // todo: try-catch
-            std::async(std::launch::async,
+            //auto f = std::async(std::launch::async,
+            std::thread(
             [&sum, msg_ptr]()
             //[&sum, &count](decltype(msg_ptr) ptr)
             {
@@ -90,7 +91,7 @@ try
                 //debug_print(book);
 
                 sum.add_sales(book);
-            });   // async
+            }).detach();   // async
         }   // for(;;)
     };  // recv_cycle lambda
 
@@ -126,13 +127,13 @@ try
         }   // for(;;)
     };  // log_cycle lambda
 
-    // launch recv_cycle then wait
-    auto fu = std::async(std::launch::async, recv_cycle);
-
     // launch log_cycle
-    std::async(std::launch::async, log_cycle);
+    auto fu1 = std::async(std::launch::async, log_cycle);
 
-    fu.wait();
+    // launch recv_cycle then wait
+    auto fu2 = std::async(std::launch::async, recv_cycle);
+
+    fu2.wait();
 }
 catch(std::exception& e)
 {

@@ -7,7 +7,10 @@
 //
 // gcc -E -dM - < /dev/null
 
+#include <cassert>
+
 #include <typeinfo>
+#include <string>
 #include <iostream>
 #include <stdexcept>
 #include <type_traits>
@@ -32,6 +35,22 @@ struct fib<1>
 {
     static const int value = 1;
 };
+
+#if __cplusplus >= 201402
+constexpr int const_fib(int n)
+{
+    if (n <= 1) {
+        return 1;
+    }
+
+    return const_fib(n - 1) + const_fib(n - 2);
+}
+#else   // C++11
+int const_fib(int n)
+{
+    return 42;
+}
+#endif
 
 //[[deprecated("deadline:2020-12-31")]]      // c++14 or later
 [[gnu::deprecated]] // c+11 or later
@@ -107,6 +126,18 @@ void check_type(T v)
     cout << is_void<void>::value << endl;
 }
 
+void case5()
+{
+    int     i = 10;
+    int    *p = &i;
+
+    assert(i > 0 && "i must be greater than zero");
+    assert(p != nullptr);
+
+    std::string str = "hello";
+    assert(!str.empty());
+}
+
 int main()
 {
     using namespace std;
@@ -116,6 +147,8 @@ int main()
     cout << fib<4>::value << endl;
     cout << fib<5>::value << endl;
 
+    cout << const_fib(10) << endl;
+
     old_func();
     get_num();
 
@@ -123,6 +156,7 @@ int main()
     case3();
 
     case4();
+    case5();
 
     check_type(10);
     //check_type((void*)0);
