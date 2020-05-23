@@ -19,9 +19,9 @@ int main()
     cout << "gcc major = " << __GNUC__ << endl;
     cout << "gcc minor = " << __GNUC_MINOR__ << endl;
     cout << "gcc patch = " << __GNUC_PATCHLEVEL__ << endl;
-    #ifdef __GLIBCXX__
+#ifdef __GLIBCXX__
     cout << "libstdc++ = " << __GLIBCXX__ << endl;
-    #else
+#else
     cout << "libstdc++ = " << "unkown version,please check or config your gcc path,or your OS not surpport." << endl;
-    #endif
+#endif
 }
