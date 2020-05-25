@@ -35,6 +35,7 @@ Pull requests of make/cmake are welcome!
 
 ## Dev Links
 
+* [PCRE](http://www.pcre.org/)
 * [Boost](https://www.boost.org/)
 * [tbb](https://github.com/intel/tbb)
 * [JSON](https://www.json.org/json-zh.html)
