@@ -21,6 +21,7 @@ void case1()
     auto pfunc = &my_square;
 
     (*pfunc)(3);
+    pfunc(3);
 
     auto func = [](int x)
     {
