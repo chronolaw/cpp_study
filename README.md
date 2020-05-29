@@ -49,6 +49,7 @@ Pull requests of make/cmake are welcome!
 * [libcurl](https://curl.haxx.se/libcurl/)
 * [cpr](https://github.com/whoshuu/cpr)
 * [ZMQ](https://zeromq.org/)
+* [cppzmq](https://github.com/zeromq/cppzmq)
 * [pybind11](https://github.com/pybind/pybind11)
 * [lua](https://www.lua.org/)
 * [luajit](http://luajit.org/)
