@@ -145,6 +145,21 @@ void case6()
     cout << f(str) << endl;
 }
 
+// demo for function + lambda
+class Demo final
+{
+public:
+    using func_type = std::function<void()>;
+public:
+    func_type print = [this]()
+    {
+        cout << "value = " << m_value << endl;
+        cout << "hello function+lambda" << endl;
+    };
+private:
+    int m_value = 10;
+};
+
 int main()
 {
     case1();
@@ -153,6 +168,9 @@ int main()
     case4();
     case5();
     case6();
+
+    Demo d;
+    d.print();
 
     cout << "lambda demo" << endl;
 }
