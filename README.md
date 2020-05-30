@@ -13,7 +13,8 @@ Pull requests of make/cmake are welcome!
 ## Reference
 
 * [ISO C++](http://www.open-std.org/jtc1/sc22/wg21/)
-* [cppreference](https://en.cppreference.com/w/)
+* [cppreference(en)](https://en.cppreference.com/w/)
+* [cppreference(zh)](https://zh.cppreference.com/w/)
 
 
 ## Resource
