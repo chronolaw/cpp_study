@@ -23,7 +23,7 @@ void case1()
     using namespace std;
 
     unique_ptr<int> ptr1(new int(10));
-    assert(*ptr1 = 10);
+    assert(*ptr1 == 10);
     assert(ptr1 != nullptr);
 
     unique_ptr<string> ptr2(new string("hello"));
