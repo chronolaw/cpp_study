@@ -24,7 +24,7 @@ public:
     void lock() noexcept
     {
         for(;;) {
-            if (m_lock.test_and_set()) {
+            if (!m_lock.test_and_set()) {
                 return;
             }
 
