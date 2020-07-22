@@ -34,7 +34,7 @@ public:
 
     bool try_lock() noexcept
     {
-        return m_lock.test_and_set();
+        return !m_lock.test_and_set();
     }
 
     void unlock() noexcept
