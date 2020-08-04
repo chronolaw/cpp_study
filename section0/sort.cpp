@@ -14,6 +14,8 @@ int main()
 {
     std::vector<int> v = {42,9,4,2,5,10,1,0};
 
+    // -----------------------------
+
     auto bubble_sort = [=]() mutable
     {
         int len = v.size();
@@ -38,4 +40,62 @@ int main()
     };
 
     bubble_sort();
+
+    // -----------------------------
+
+    auto select_sort = [=]() mutable
+    {
+        int len = v.size();
+
+        for (int i = 0; i < len - 1; i++)
+        {
+            int min = i;
+            for(int j = i + 1; j < len; j ++)
+            {
+                if (v[min] > v[j])
+                {
+                    min = j;
+                }
+
+                swap(v[i], v[min]);
+            }
+        }
+
+        for(auto& x : v)
+        {
+            cout << x << ',';
+        }
+
+        cout << endl;
+    };
+
+    select_sort();
+
+    // -----------------------------
+
+    auto insert_sort = [=]() mutable
+    {
+        int len = v.size();
+
+        int i, j;
+        for(i = 0;i < len; i++)
+        {
+            int tmp = v[i];
+            for(j = i; j > 0 && v[j - 1] > tmp; j--)
+            {
+                v[j] = v[j - 1];
+            }
+
+            v[j] = tmp;
+        }
+
+        for(auto& x : v)
+        {
+            cout << x << ',';
+        }
+
+        cout << endl;
+    };
+
+    insert_sort();
 }
