@@ -11,6 +11,7 @@
 
 using namespace std;
 
+/*
 template<typename T>
 void quick_sort_impl(T& v, int left, int right)
 {
@@ -45,6 +46,7 @@ void quick_sort_impl(T& v, int left, int right)
     quick_sort_impl(v, left, mid - 1);
     quick_sort_impl(v, mid + 1, right);
 }
+*/
 
 int main()
 {
@@ -131,6 +133,42 @@ int main()
     insert_sort();
 
     // -----------------------------
+
+    std::function<void(decltype(v)&,int, int)> quick_sort_impl;
+
+    quick_sort_impl = [&quick_sort_impl](decltype(v)& v,int left, int right)
+    {
+        auto quick_partition = [](decltype(v)& arr, int left, int right)
+        {
+            // key => value type => int
+            decltype(v.front()) key = arr[right];
+
+            int i = left - 1;
+            int j = left;
+
+            for (; j < right; j++)
+            {
+                if (arr[j] < key)
+                {
+                    std::swap(arr[j], arr[++i]);
+                }
+            }
+
+            std::swap(arr[right], arr[++i]);
+
+            return i;
+        };
+
+        if (left > right)
+        {
+            return;
+        }
+
+        int mid = quick_partition(v, left, right);
+
+        quick_sort_impl(v, left, mid - 1);
+        quick_sort_impl(v, mid + 1, right);
+    };
 
     auto quick_sort = [=]() mutable
     {
