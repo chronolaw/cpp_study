@@ -16,7 +16,9 @@ void quick_sort_impl(T& v, int left, int right)
 {
     auto quick_partition = [](decltype(v)& arr, int left, int right)
     {
-        int key = arr[right];
+        // key => value type => int
+        decltype(v.front()) key = arr[right];
+
         int i = left - 1;
         int j = left;
 
