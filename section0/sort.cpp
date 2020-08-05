@@ -134,31 +134,32 @@ int main()
 
     // -----------------------------
 
+    auto quick_partition = [](decltype(v)& arr, int left, int right)
+    {
+        // key => value type => int
+        decltype(v.front()) key = arr[right];
+
+        int i = left - 1;
+        int j = left;
+
+        for (; j < right; j++)
+        {
+            if (arr[j] < key)
+            {
+                std::swap(arr[j], arr[++i]);
+            }
+        }
+
+        std::swap(arr[right], arr[++i]);
+
+        return i;
+    };
+
     std::function<void(decltype(v)&,int, int)> quick_sort_impl;
 
-    quick_sort_impl = [&quick_sort_impl](decltype(v)& v,int left, int right)
+    quick_sort_impl =
+    [&quick_sort_impl, &quick_partition](decltype(v)& v,int left, int right)
     {
-        auto quick_partition = [](decltype(v)& arr, int left, int right)
-        {
-            // key => value type => int
-            decltype(v.front()) key = arr[right];
-
-            int i = left - 1;
-            int j = left;
-
-            for (; j < right; j++)
-            {
-                if (arr[j] < key)
-                {
-                    std::swap(arr[j], arr[++i]);
-                }
-            }
-
-            std::swap(arr[right], arr[++i]);
-
-            return i;
-        };
-
         if (left > right)
         {
             return;
