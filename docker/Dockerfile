@@ -38,9 +38,18 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && cd github \
     && curl -fsL https://github.com/nlohmann/json/releases/download/v3.9.1/json.hpp -o json.hpp \
     && cp json.hpp ~/cpp_study/common \
-    && curl -fsL https://github.com/whoshuu/cpr/archive/v1.5.1.tar.gz -o cpr.tgz \
+    && curl -fsL https://github.com/whoshuu/cpr/archive/1.4.0.tar.gz -o cpr.tgz \
+    && tar xfz cpr.tgz \
+    && cd cpr-1.4.0 \
+    && cmake . -DUSE_SYSTEM_CURL=ON -DBUILD_CPR_TESTS=OFF \
+    && make && make install \
+    && cd .. \
     && curl -fsL https://github.com/openresty/luajit2/archive/v2.1-20200102.tar.gz -o luajit.tgz \
+    && tar xfz luajit.tgz \
+    && cd luajit2-2.1-20200102 \
+    && make && make install \
     && curl -fsL https://github.com/vinniefalco/LuaBridge/archive/2.6.tar.gz -o LuaBridge.tgz \
+    && cd .. \
     && git clone https://github.com/brendangregg/FlameGraph.git 
 
 
