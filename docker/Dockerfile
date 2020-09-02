@@ -19,15 +19,16 @@ ARG SRC_IMAGE="chronolaw/http_study"
 FROM ${SRC_IMAGE}
 
 #LABEL version="2020-09"
+#        linux-tools-4.4.0-31-generic linux-cloud-tools-4.4.0-31-generic linux-tools-generic linux-cloud-tools-generic 
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         cmake pstack strace linux-tools-common \
-        linux-tools-4.4.0-31-generic linux-cloud-tools-4.4.0-31-generic linux-tools-generic linux-cloud-tools-generic \
-        libmsgpack-dev protobuf-compiler libprotobuf-dev libprotoc-dev \
+        libmsgpack-dev protobuf-compiler libprotobuf-dev \
         libcurl4-openssl-dev libzmq3-dev \
         python3-dev python3-pip \
         google-perftools libgoogle-perftools-dev \
+        graphviz \
     && pip3 install pybind11 \
     && cd \
     && git clone https://github.com/chronolaw/cpp_study \
@@ -37,6 +38,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && git clone https://github.com/whoshuu/cpr.git \
     && git clone https://github.com/openresty/luajit2.git \
     && git clone https://github.com/vinniefalco/LuaBridge.git \
+    && git clone https://github.com/brendangregg/FlameGraph.git \
     && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
 
 
