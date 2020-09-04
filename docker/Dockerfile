@@ -11,8 +11,8 @@
 # docker run -it --rm chronolaw/cpp_study bash
 
 # docker login
-# docker image push chronolaw/cpp_study
-# docker image pull chronolaw/cpp_study
+# docker push chronolaw/cpp_study
+# docker pull chronolaw/cpp_study
 
 ARG SRC_IMAGE="gcc:7"
 
@@ -20,11 +20,9 @@ FROM ${SRC_IMAGE}
 
 #LABEL version="2020-09"
 
-#        gcc-multilib g++-multilib
-#        linux-tools-common
-#        linux-tools-4.4.0-31-generic linux-cloud-tools-4.4.0-31-generic linux-tools-generic linux-cloud-tools-generic
-#        graphviz
-#    && mkdir -p cpp_study/common \
+# gcc-multilib g++-multilib
+# linux-tools-common
+# linux-tools-4.4.0-31-generic linux-cloud-tools-4.4.0-31-generic linux-tools-generic linux-cloud-tools-generic
 
 ARG JSON_VERSION="3.9.1"
 ARG CPR_VERSION="1.4.0"
@@ -50,12 +48,12 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && tar xfz cpr.tgz \
     && cd cpr-${CPR_VERSION} \
     && cmake . -DUSE_SYSTEM_CURL=ON -DBUILD_CPR_TESTS=OFF \
-    && make && make install \
+    && make && make install && make clean \
     && cd .. \
     && curl -fsL https://github.com/openresty/luajit2/archive/v${LUAJIT_VERSION}.tar.gz -o luajit.tgz \
     && tar xfz luajit.tgz \
     && cd luajit2-${LUAJIT_VERSION} \
-    && make && make install \
+    && make && make install && make clean \
     && ln -s /usr/local/lib/libluajit-5.1.so.2 /lib/x86_64-linux-gnu/ \
     && cd .. \
     && curl -fsL https://github.com/vinniefalco/LuaBridge/archive/${LUABRIDAGE_VERSION}.tar.gz -o LuaBridge.tgz \
@@ -79,4 +77,4 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 
 
 CMD ["/bin/bash"]
-#CMD ["/bin/bash", "-c", "cat /root/cpp_study/hosts >> /etc/hosts;cd /root/cpp_study/www;./run.sh start;/bin/bash"]
+#CMD ["/bin/bash", "-c", "cd ~/cpp_study;/bin/bash"]
