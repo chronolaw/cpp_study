@@ -5,7 +5,7 @@
 # sudo service docker start
 # sudo usermod -aG docker ${USER}
 
-# docker image build -t chronolaw/cpp_study .
+# docker build -t chronolaw/cpp_study .
 
 # docker run -it chronolaw/cpp_study bash
 # docker run -it --rm chronolaw/cpp_study bash
@@ -22,7 +22,7 @@ FROM ${SRC_IMAGE}
 
 #        gcc-multilib g++-multilib
 #        linux-tools-common
-#        linux-tools-4.4.0-31-generic linux-cloud-tools-4.4.0-31-generic linux-tools-generic linux-cloud-tools-generic 
+#        linux-tools-4.4.0-31-generic linux-cloud-tools-4.4.0-31-generic linux-tools-generic linux-cloud-tools-generic
 #        graphviz
 #    && mkdir -p cpp_study/common \
 
@@ -30,6 +30,7 @@ ARG JSON_VERSION="3.9.1"
 ARG CPR_VERSION="1.4.0"
 ARG LUAJIT_VERSION="2.1-20200102"
 ARG LUABRIDAGE_VERSION="2.6"
+ARG GPERF_VERSION="2.8"
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -60,7 +61,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && curl -fsL https://github.com/vinniefalco/LuaBridge/archive/${LUABRIDAGE_VERSION}.tar.gz -o LuaBridge.tgz \
     && tar xfz LuaBridge.tgz \
     && ln -s ~/github/LuaBridge-${LUABRIDAGE_VERSION}/Source/LuaBridge/  ~/cpp_study/common/ \
+    && curl -fsL https://github.com/gperftools/gperftools/releases/download/gperftools-${GPERF_VERSION}/gperftools-${GPERF_VERSION}.tar.gz -o gperf.tgz \
+    && tar xfz gperf.tgz \
+    && ln -s ~/github/gperftools-${GPERF_VERSION}/pprof-symbolize /bin/pprof \
     && git clone https://github.com/brendangregg/FlameGraph.git \
+    && ln -s ~/github/FlameGraph/flamegraph.pl ~/cpp_study/section4/ \
     && rm *.tgz \
     && echo "set nu" >> ~/.vimrc \
     && echo "sy on" >> ~/.vimrc \
