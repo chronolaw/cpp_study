@@ -27,7 +27,8 @@ FROM ${SRC_IMAGE}
 #    && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
 #    && mkdir -p cpp_study/common \
 
-ARG CPR_VERSION="1.5.1"
+ARG JSON_VERSION="3.9.1"
+ARG CPR_VERSION="1.4.0"
 ARG LUAJIT_VERSION="2.1-20200102"
 ARG LUABRIDAGE_VERSION="2.6"
 
@@ -43,8 +44,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && git clone https://github.com/chronolaw/cpp_study \
     && mkdir github \
     && cd github \
-    && curl -fsL https://github.com/nlohmann/json/releases/download/v3.9.1/json.hpp -o json.hpp \
-    && ln -s json.hpp ~/cpp_study/common/json.hpp \
+    && curl -fsL https://github.com/nlohmann/json/releases/download/v${JSON_VERSION}/json.hpp -o json.hpp \
+    && ln -s ~/github/json.hpp ~/cpp_study/common/ \
     && curl -fsL https://github.com/whoshuu/cpr/archive/${CPR_VERSION}.tar.gz -o cpr.tgz \
     && tar xfz cpr.tgz \
     && cd cpr-${CPR_VERSION} \
@@ -58,11 +59,12 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && cd .. \
     && curl -fsL https://github.com/vinniefalco/LuaBridge/archive/${LUABRIDAGE_VERSION}.tar.gz -o LuaBridge.tgz \
     && tar xfz LuaBridge.tgz \
-    && cd LuaBridge-${LUABRIDAGE_VERSION} \
-    && ln -s Source/LuaBridge/  ~/cpp_study/common/ \
-    && cd .. \
+    && ln -s ~/github/LuaBridge-${LUABRIDAGE_VERSION}/Source/LuaBridge/  ~/cpp_study/common/
     && git clone https://github.com/brendangregg/FlameGraph.git \
     && rm *.tgz \
+    && echo "set nu" >> ~/.vimrc \
+    && echo "set mouse=" >> ~/.vimrc \
+    && echo "set tabstop=4" >> ~/.vimrc \
     && echo "alias ll='ls -l'" >> ~/.bashrc \
     && echo "alias l='ls -lh'" >> ~/.bashrc \
     && echo "alias vi='vim'" >> ~/.bashrc \
