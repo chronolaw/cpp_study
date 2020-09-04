@@ -6,8 +6,8 @@
 //
 // protoc --cpp_out=. sample.proto
 //
-// g++ protobuf.cpp -std=c++11 -lprotobuf -o a.out;./a.out
-// g++ protobuf.cpp -std=c++14 -lprotobuf -o a.out;./a.out
+// g++ protobuf.cpp -std=c++11 -lprotobuf -lpthread -o a.out;./a.out
+// g++ protobuf.cpp -std=c++14 -lprotobuf -lpthread -o a.out;./a.out
 
 #include <cassert>
 
