@@ -1,7 +1,7 @@
 // Copyright (c) 2050 by Chrono
 //
-// g++ test05.cpp -std=c++11 -o a.out;./a.out
-// g++ test05.cpp -std=c++14 -o a.out;./a.out
+// g++ oop.cpp -std=c++11 -o a.out;./a.out
+// g++ oop.cpp -std=c++14 -o a.out;./a.out
 //
 
 #include <iostream>
