@@ -58,7 +58,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && cd .. \
     && curl -fsL https://github.com/vinniefalco/LuaBridge/archive/${LUABRIDAGE_VERSION}.tar.gz -o LuaBridge.tgz \
     && tar xfz LuaBridge.tgz \
-    && ln -s ~/github/LuaBridge-${LUABRIDAGE_VERSION}/Source/LuaBridge/  ~/cpp_study/common/
+    && ln -s ~/github/LuaBridge-${LUABRIDAGE_VERSION}/Source/LuaBridge/  ~/cpp_study/common/ \
     && git clone https://github.com/brendangregg/FlameGraph.git \
     && rm *.tgz \
     && echo "set nu" >> ~/.vimrc \
@@ -67,7 +67,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && echo "alias ll='ls -l'" >> ~/.bashrc \
     && echo "alias l='ls -lh'" >> ~/.bashrc \
     && echo "alias vi='vim'" >> ~/.bashrc \
-    && echo "set -o vi" >> ~/.bashrc
+    && echo "set -o vi" >> ~/.bashrc \
     && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
 
 
