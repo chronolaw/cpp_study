@@ -55,6 +55,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && tar xfz luajit.tgz \
     && cd luajit2-${LUAJIT_VERSION} \
     && make && make install \
+    && ln -s /usr/local/lib/libluajit-5.1.so.2 /lib/x86_64-linux-gnu/ \
     && cd .. \
     && curl -fsL https://github.com/vinniefalco/LuaBridge/archive/${LUABRIDAGE_VERSION}.tar.gz -o LuaBridge.tgz \
     && tar xfz LuaBridge.tgz \
