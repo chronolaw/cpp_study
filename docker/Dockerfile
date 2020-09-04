@@ -23,8 +23,7 @@ FROM ${SRC_IMAGE}
 #        gcc-multilib g++-multilib
 #        linux-tools-common
 #        linux-tools-4.4.0-31-generic linux-cloud-tools-4.4.0-31-generic linux-tools-generic linux-cloud-tools-generic 
-#        graphviz 
-#    && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
+#        graphviz
 #    && mkdir -p cpp_study/common \
 
 ARG JSON_VERSION="3.9.1"
@@ -34,8 +33,8 @@ ARG LUABRIDAGE_VERSION="2.6"
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        vim cmake pstack strace  \
-        libmsgpack-dev protobuf-compiler libprotobuf-dev \
+        vim cmake gdb pstack strace  \
+        libmsgpack-dev protobuf-compiler libprotobuf-dev libprotoc-dev \
         libcurl4-openssl-dev libzmq3-dev \
         python3-dev python3-pip \
         google-perftools libgoogle-perftools-dev \
@@ -69,6 +68,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && echo "alias l='ls -lh'" >> ~/.bashrc \
     && echo "alias vi='vim'" >> ~/.bashrc \
     && echo "set -o vi" >> ~/.bashrc
+    && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
 
 
 CMD ["/bin/bash"]
