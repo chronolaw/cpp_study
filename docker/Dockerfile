@@ -40,6 +40,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && pip3 install pybind11 \
     && cd \
     && git clone https://github.com/chronolaw/cpp_study \
+    && cp ~/cpp_study/env/vimrc ~/.vimrc \
+    && cp ~/cpp_study/env/bashrc ~/.bashrc \
+    && cp ~/cpp_study/env/gitconfig ~/.gitconfig \
     && mkdir github \
     && cd github \
     && curl -fsL https://github.com/nlohmann/json/releases/download/v${JSON_VERSION}/json.hpp -o json.hpp \
@@ -65,16 +68,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && git clone https://github.com/brendangregg/FlameGraph.git \
     && ln -s ~/github/FlameGraph/flamegraph.pl ~/cpp_study/section4/ \
     && rm *.tgz \
-    && echo "set nu" >> ~/.vimrc \
-    && echo "sy on" >> ~/.vimrc \
-    && echo "set mouse=" >> ~/.vimrc \
-    && echo "set tabstop=4" >> ~/.vimrc \
-    && echo "alias ll='ls -l'" >> ~/.bashrc \
-    && echo "alias l='ls -lh'" >> ~/.bashrc \
-    && echo "alias vi='vim'" >> ~/.bashrc \
-    && echo "set -o vi" >> ~/.bashrc \
     && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
 
 
-CMD ["/bin/bash"]
-#CMD ["/bin/bash", "-c", "cd ~/cpp_study;/bin/bash"]
+#CMD ["/bin/bash"]
+CMD ["/bin/bash", "-c", "cd ~/cpp_study;/bin/bash"]
