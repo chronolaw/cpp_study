@@ -7,8 +7,12 @@
 
 # docker build -t chronolaw/cpp_study .
 
-# docker run -it chronolaw/cpp_study bash
-# docker run -it --rm chronolaw/cpp_study bash
+# docker run -it chronolaw/cpp_study
+# docker run -it --rm chronolaw/cpp_study
+
+# check for http server in http_study
+# docker inspect bridge
+# curl 172.17.0.3/11-1 -v
 
 # docker login
 # docker push chronolaw/cpp_study
