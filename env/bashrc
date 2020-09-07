@@ -1,7 +1,9 @@
 # Copyright (c) 2020 by Chrono
 
 set -o vi
+alias ll='ls -l'
 alias l='ls -lh'
+alias vi='vim'
 
 function set-title() {
     if [[ -z "$ORIG" ]]; then

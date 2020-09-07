@@ -1,5 +1,6 @@
 set nu
 sy on
+set mouse=
 set ruler
 set smartindent shiftwidth=4
 set tabstop=4
