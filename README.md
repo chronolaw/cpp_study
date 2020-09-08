@@ -9,6 +9,14 @@ Pull requests of make/cmake are welcome!
 * Linux : Ubuntu, Debian, CentOS, and others
 * macOS(OS X) : may work but not be tested
 
+## Docker
+
+You can also use this in docker, it bases on gcc 7.5.0:
+
+```docker
+docker pull chronolaw/cpp_study
+docker run -it --rm chronolaw/cpp_study
+```
 
 ## Reference
 
