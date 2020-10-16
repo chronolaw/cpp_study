@@ -20,4 +20,4 @@ p = pydemo.Point(999)
 print(p.get())
 
 p.set(1984)
-assert(p.get() == 1984);
+assert(p.get() == 1984)
