@@ -97,7 +97,11 @@ void case3()
     msgpack::sbuffer sbuf;
     msgpack::pack(sbuf, book1);
 
-    auto obj = msgpack::unpack(sbuf.data(), sbuf.size()).get();
+    // may cause std::bad_cast error
+    //auto obj = msgpack::unpack(sbuf.data(), sbuf.size()).get();
+
+    auto handle = msgpack::unpack(sbuf.data(), sbuf.size());
+    auto obj = handle.get();
 
     Book book2;
     obj.convert(book2);
