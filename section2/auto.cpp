@@ -4,11 +4,15 @@
 // g++ auto.cpp -std=c++14 -o a.out;./a.out
 // g++ auto.cpp -std=c++14 -I../common -o a.out;./a.out
 
+#include <cassert>
+
 #include <iostream>
 #include <string>
 #include <vector>
 #include <set>
 #include <map>
+
+#include <type_traits>
 
 #include <signal.h>
 
@@ -97,6 +101,10 @@ void case6()
     decltype(auto)     x1 = (x);
     decltype(auto)     x2 = &x;
     decltype(auto)     x3 = x1;
+
+    assert(std::is_lvalue_reference<decltype(x1)>::value);
+    assert(std::is_pointer<decltype(x2)>::value);
+    assert(std::is_lvalue_reference<decltype(x3)>::value);
 }
 
 auto get_a_set()
