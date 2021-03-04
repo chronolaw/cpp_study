@@ -2,6 +2,8 @@
 #
 # docker-compose run --rm cpp_study
 #
+# docker ps
+# docker exec -it xxx bash
 
 version: "3"
 
@@ -13,7 +15,10 @@ services:
 
     container_name: cpp_study
 
-    working_dir: /root/cpp_study/
+    working_dir: /root/cpp_study
+
+    stdin_open: true
+    tty: true
 
     command: /bin/bash
 
