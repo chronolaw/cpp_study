@@ -22,7 +22,7 @@ spec:
 
     containers:
 
-    - name: cpp_study
+    - name: cpp-study
       image: chronolaw/cpp_study
       workingDir: /root/cpp_study
 
