@@ -43,7 +43,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         google-perftools libgoogle-perftools-dev \
     && pip3 install pybind11 \
     && cd \
-    && git clone https://github.com/chronolaw/cpp_study \
+    && git clone https://github.com/chronolaw/cpp_study --depth=1 \
     && cp ~/cpp_study/env/vimrc ~/.vimrc \
     && cp ~/cpp_study/env/bashrc ~/.bashrc \
     && cp ~/cpp_study/env/gitconfig ~/.gitconfig \
@@ -69,7 +69,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && curl -fsL https://github.com/gperftools/gperftools/releases/download/gperftools-${GPERF_VERSION}/gperftools-${GPERF_VERSION}.tar.gz -o gperf.tgz \
     && tar xfz gperf.tgz \
     && ln -s ~/github/gperftools-${GPERF_VERSION}/pprof-symbolize /bin/pprof \
-    && git clone https://github.com/brendangregg/FlameGraph.git \
+    && git clone https://github.com/brendangregg/FlameGraph.git --depth=1 \
     && ln -s ~/github/FlameGraph/flamegraph.pl ~/cpp_study/section4/ \
     && rm *.tgz \
     && DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
