@@ -1,0 +1,32 @@
+# kubernetes pod yaml for cpp study
+# you could run it in k8s/minikube/kind/...
+# chrono @ 2021-03
+
+# kubectl apply  -f cpp-study-pod.yml
+# kubectl delete -f cpp-study-pod.yml
+#
+# kubectl get pods
+# kubectl exec -it k8s-cpp-study -- bash
+# kubectl attach -it k8s-cpp-study
+
+apiVersion: v1
+kind: Pod
+
+metadata:
+    name: k8s-cpp-study
+    labels:
+        author: chrono
+        env: study
+
+spec:
+
+    containers:
+
+    - name: cpp_study
+      image: chronolaw/cpp_study
+      workingDir: /root/cpp_study
+
+      # exec or attach into this container
+      stdin: true
+      tty: true
+
