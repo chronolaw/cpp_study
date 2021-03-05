@@ -1,0 +1,22 @@
+# Dockerfile
+# chrono@2021-03
+
+# curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
+# sudo service docker start
+# sudo usermod -aG docker ${USER}
+
+# docker build -t chronolaw/cpp_study .
+
+# docker run -it --rm chronolaw/cpp_study
+
+ARG SRC_IMAGE="gcc:7"
+
+FROM ${SRC_IMAGE}
+
+WORKDIR /root
+
+COPY setup.sh ./
+
+RUN ./setup.sh
+
+CMD ["/bin/bash"]
