@@ -17,6 +17,6 @@ WORKDIR /root
 
 COPY setup.sh ./
 
-RUN ./setup.sh
+RUN ./setup.sh && rm ./setup.sh
 
 CMD ["/bin/bash"]

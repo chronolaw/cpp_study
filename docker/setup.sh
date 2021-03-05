@@ -16,12 +16,12 @@ DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
 pip3 install pybind11
 
 #WORKDIR='/root/'
+#HOME='/root'
 
-HOME='/root'
-
+# git source code
 git clone https://github.com/chronolaw/cpp_study --depth=1
 
-# setubp env
+# setup env
 cp ${HOME}/cpp_study/env/vimrc     ${HOME}/.vimrc \
 cp ${HOME}/cpp_study/env/bashrc    ${HOME}/.bashrc \
 cp ${HOME}/cpp_study/env/gitconfig ${HOME}/.gitconfig \
@@ -35,9 +35,13 @@ LUABRIDAGE_VERSION="2.6"
 GPERF_VERSION="2.8"
 
 #echo ${JSON_VERSION}
+#echo ${HOME}
 
 mkdir ${HOME}/github
 cd ${HOME}/github
+
+# test
+#exit
 
 # json
 curl -fsL https://github.com/nlohmann/json/releases/download/v${JSON_VERSION}/json.hpp -o json.hpp
