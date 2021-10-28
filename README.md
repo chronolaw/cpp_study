@@ -37,6 +37,7 @@ docker run -it --rm chronolaw/cpp_study
 
 * [Bjarne Stroustrup's FAQ](http://www.stroustrup.com/bs_faq.html)
 * [Bjarne Stroustrup's C++11 FAQ](http://www.stroustrup.com/C++11FAQ.html)
+* [Bjarne Stroustrup's C++ HOPL4 (zh-cn)](https://github.com/Cpp-Club/Cxx_HOPL4_zh)
 * [C++ Core Guidelines](https://github.com/isocpp/CppCoreGuidelines)
 * [OpenResty Code Style Guide(zh-cn)](http://openresty.org/cn/c-coding-style-guide.html)
 * [Google Code Style Guide](https://google.github.io/styleguide/cppguide.html)
