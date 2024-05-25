@@ -26,6 +26,8 @@ void case1()
 #
 #if __linux__
 #   define HAS_LINUX    1
+#else
+#   define HAS_LINUX    0
 #endif
 #
     cout << "linux is " << HAS_LINUX << endl;
